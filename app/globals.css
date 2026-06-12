@@ -1,625 +1,159 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-/* ============================================
-   KCM Dashboard — Design System
-   Premium dark theme with glassmorphism
-   ============================================ */
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* Font families */
-  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-geist-mono), "Fira Code", monospace;
-
-  /* Use our CSS variables for tailwind colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-hover: var(--secondary-hover);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-sidebar: var(--sidebar);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-active: var(--sidebar-active);
-  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Curefoods brand colors */
+  --color-brand: #0D1F6E;
+  --color-brand-dark: #091559;
+  --color-brand-light: #1A3299;
+  --color-brand-50: #EEF0FA;
+  --color-brand-100: #D4D9F2;
+  --color-brand-200: #A9B3E5;
+  --color-brand-900: #060B2E;
+}
+
+/* ─── Light mode (Curefoods brand) ─── */
+:root {
+  --background: oklch(0.97 0.005 260);       /* #F4F6FB off-white */
+  --foreground: oklch(0.25 0.08 265);         /* #0D1F6E navy */
+  --card: oklch(1 0 0);                       /* pure white */
+  --card-foreground: oklch(0.25 0.08 265);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.25 0.08 265);
+  --primary: oklch(0.25 0.08 265);            /* #0D1F6E brand navy */
+  --primary-foreground: oklch(1 0 0);         /* white */
+  --secondary: oklch(0.94 0.01 260);          /* #E2E8F7 muted */
+  --secondary-foreground: oklch(0.25 0.08 265);
+  --muted: oklch(0.92 0.01 260);              /* light muted */
+  --muted-foreground: oklch(0.52 0.04 255);   /* #5B6FA6 */
+  --accent: oklch(0.94 0.015 260);
+  --accent-foreground: oklch(0.25 0.08 265);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.90 0.012 260);            /* #E2E8F7 */
+  --input: oklch(0.90 0.012 260);
+  --ring: oklch(0.25 0.08 265);               /* brand navy */
+  --chart-1: oklch(0.55 0.12 265);
+  --chart-2: oklch(0.45 0.10 265);
+  --chart-3: oklch(0.65 0.08 180);
+  --chart-4: oklch(0.60 0.15 140);
+  --chart-5: oklch(0.70 0.10 60);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.22 0.07 265);            /* #091559 dark navy */
+  --sidebar-foreground: oklch(0.95 0.005 260);
+  --sidebar-primary: oklch(0.60 0.12 265);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.28 0.06 265);
+  --sidebar-accent-foreground: oklch(0.95 0.005 260);
+  --sidebar-border: oklch(0.30 0.06 265);
+  --sidebar-ring: oklch(0.60 0.12 265);
+}
+
+/* ─── Dark mode (Curefoods brand) ─── */
+.dark {
+  --background: oklch(0.15 0.04 265);         /* #080F33 */
+  --foreground: oklch(0.97 0 0);              /* near-white */
+  --card: oklch(0.20 0.05 265);               /* #0D1A4A */
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.20 0.05 265);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.55 0.12 265);            /* lighter navy for contrast */
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.22 0.05 265);
+  --secondary-foreground: oklch(0.95 0 0);
+  --muted: oklch(0.22 0.05 265);
+  --muted-foreground: oklch(0.65 0.03 255);
+  --accent: oklch(0.22 0.05 265);
+  --accent-foreground: oklch(0.95 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(0.28 0.06 265);             /* #1A2B6B */
+  --input: oklch(0.28 0.06 265);
+  --ring: oklch(0.55 0.12 265);
+  --chart-1: oklch(0.65 0.12 265);
+  --chart-2: oklch(0.55 0.10 265);
+  --chart-3: oklch(0.60 0.08 180);
+  --chart-4: oklch(0.55 0.15 140);
+  --chart-5: oklch(0.65 0.10 60);
+  --sidebar: oklch(0.17 0.05 265);
+  --sidebar-foreground: oklch(0.95 0.005 260);
+  --sidebar-primary: oklch(0.55 0.12 265);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.22 0.05 265);
+  --sidebar-accent-foreground: oklch(0.95 0.005 260);
+  --sidebar-border: oklch(0.28 0.06 265);
+  --sidebar-ring: oklch(0.55 0.12 265);
 }
 
 @layer base {
-  :root {
-    --background: #fafafa;
-    --foreground: #09090b;
-    --card: #ffffff;
-    --card-foreground: #09090b;
-    --border: #e4e4e7;
-    --input: #e4e4e7;
-    --ring: #6366f1;
-    --primary: #6366f1;
-    --primary-foreground: #ffffff;
-    --secondary: #f4f4f5;
-    --secondary-hover: #e4e4e7;
-    --muted: #f4f4f5;
-    --muted-foreground: #71717a;
-    --sidebar: #ffffff;
-    --sidebar-foreground: #52525b;
-    --sidebar-active: #6366f1;
-    --sidebar-hover: #f4f4f5;
-    
-    /* Variables for hardcoded raw CSS */
-    --glass-bg: rgba(255, 255, 255, 0.6);
-    --glass-hover-bg: rgba(244, 244, 245, 0.8);
-    --glass-border: rgba(228, 228, 231, 0.5);
-    --table-header-bg: rgba(255, 255, 255, 0.9);
-    --table-row-hover: rgba(244, 244, 245, 0.6);
-    --table-border: rgba(228, 228, 231, 0.8);
-    --table-text: #3f3f46;
-    --table-header-text: #71717a;
-    --skeleton-bg: #e4e4e7;
-    --input-bg: #ffffff;
-    --modal-bg: #ffffff;
-    --modal-border: #e4e4e7;
+  * {
+    @apply border-border outline-ring/50;
   }
-  
-  .dark {
-    --background: #09090b;
-    --foreground: #fafafa;
-    --card: #18181b;
-    --card-foreground: #fafafa;
-    --border: #27272a;
-    --input: #27272a;
-    --ring: #6366f1;
-    --primary: #6366f1;
-    --primary-foreground: #ffffff;
-    --secondary: #27272a;
-    --secondary-hover: #3f3f46;
-    --muted: #27272a;
-    --muted-foreground: #a1a1aa;
-    --sidebar: #0f0f12;
-    --sidebar-foreground: #a1a1aa;
-    --sidebar-active: #6366f1;
-    --sidebar-hover: #18181b;
-    
-    /* Variables for hardcoded raw CSS */
-    --glass-bg: rgba(24, 24, 27, 0.6);
-    --glass-hover-bg: rgba(31, 31, 35, 0.8);
-    --glass-border: rgba(39, 39, 42, 0.5);
-    --table-header-bg: rgba(24, 24, 27, 0.8);
-    --table-row-hover: rgba(39, 39, 42, 0.3);
-    --table-border: rgba(39, 39, 42, 0.5);
-    --table-text: #d4d4d8;
-    --table-header-text: #71717a;
-    --skeleton-bg: #1a1a1e;
-    --input-bg: #18181b;
-    --modal-bg: #18181b;
-    --modal-border: #27272a;
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
-/* ============================================
-   Base styles
-   ============================================ */
-
-* {
-  border-color: var(--color-border);
-}
-
-body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #27272a;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
-}
-
-/* ============================================
-   Glass card effect
-   ============================================ */
-
-.glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
-}
-
-.glass-card-hover {
-  transition: all 0.2s ease;
-}
-
-.glass-card-hover:hover {
-  background: var(--glass-hover-bg);
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 0 24px rgba(99, 102, 241, 0.08);
-}
-
-/* ============================================
-   Gradient text
-   ============================================ */
-
-.gradient-text {
-  background: linear-gradient(135deg, #6366f1 0%, #a78bfa 50%, #818cf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ============================================
-   Gradient border effect
-   ============================================ */
-
-.gradient-border {
-  position: relative;
-}
-
-.gradient-border::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, #6366f1, #a78bfa, #818cf8);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.gradient-border:hover::before {
-  opacity: 1;
-}
-
-/* ============================================
-   Subtle background glow
-   ============================================ */
-
-.glow-bg {
-  position: relative;
-}
-
-.glow-bg::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(99, 102, 241, 0.06) 0%,
-    transparent 70%
-  );
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ============================================
-   Stat card glow animation
-   ============================================ */
-
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.05);
+/* ─── Custom scrollbar ─── */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
-  50% {
-    box-shadow: 0 0 30px rgba(99, 102, 241, 0.12);
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
-}
-
-.stat-card-glow {
-  animation: pulse-glow 4s ease-in-out infinite;
-}
-
-/* ============================================
-   Loading skeleton animation
-   ============================================ */
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.7 0.02 265);
+    border-radius: 999px;
   }
-  100% {
-    transform: translateX(100%);
+  .dark ::-webkit-scrollbar-thumb {
+    background: oklch(0.35 0.04 265);
   }
-}
-
-.skeleton {
-  position: relative;
-  overflow: hidden;
-  background: var(--skeleton-bg);
-  border-radius: 6px;
-}
-
-.skeleton::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.04) 50%,
-    transparent 100%
-  );
-  animation: shimmer 2s infinite;
-}
-
-/* ============================================
-   Table styles
-   ============================================ */
-
-.data-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.data-table thead th {
-  background: var(--table-header-bg);
-  backdrop-filter: blur(8px);
-  padding: 12px 16px;
-  text-align: left;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--table-header-text);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.data-table tbody tr {
-  transition: background 0.15s ease;
-}
-
-.data-table tbody tr:hover {
-  background: var(--table-row-hover);
-}
-
-.data-table tbody td {
-  padding: 12px 16px;
-  font-size: 14px;
-  color: var(--table-text);
-  border-bottom: 1px solid var(--table-border);
-}
-
-/* ============================================
-   Form input styles
-   ============================================ */
-
-.form-input {
-  width: 100%;
-  padding: 10px 14px;
-  background: var(--input-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--foreground);
-  font-size: 14px;
-  transition: all 0.2s ease;
-  outline: none;
-}
-
-.form-input:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
-.form-input::placeholder {
-  color: #52525b;
-}
-
-.form-input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.form-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--muted-foreground);
-  margin-bottom: 6px;
-}
-
-/* ============================================
-   Button styles
-   ============================================ */
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  outline: none;
-  border: none;
-  white-space: nowrap;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #6366f1, #818cf8);
-  color: #ffffff;
-  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.25);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #818cf8, #a78bfa);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
-  transform: translateY(-1px);
-}
-
-.btn-secondary {
-  background: var(--secondary);
-  color: var(--foreground);
-  border: 1px solid var(--border);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: var(--secondary-hover);
-  color: var(--foreground);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--muted-foreground);
-}
-
-.btn-ghost:hover:not(:disabled) {
-  background: var(--table-row-hover);
-  color: var(--foreground);
-}
-
-.btn-destructive {
-  background: #ef4444;
-  color: #ffffff;
-}
-
-.btn-destructive:hover:not(:disabled) {
-  background: #dc2626;
-}
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
-.btn-lg {
-  padding: 12px 28px;
-  font-size: 16px;
-}
-
-/* ============================================
-   Badge styles
-   ============================================ */
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 9999px;
-  border: 1px solid;
-  white-space: nowrap;
-}
-
-/* ============================================
-   Modal / Dialog overlay
-   ============================================ */
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.2s ease;
-}
-
-.modal-content {
-  background: var(--modal-bg);
-  border: 1px solid var(--modal-border);
-  border-radius: 16px;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
-  max-width: 640px;
-  width: 90vw;
-  max-height: 85vh;
-  overflow-y: auto;
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(16px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-/* ============================================
-   Toast notification
-   ============================================ */
-
-.toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 100;
-  padding: 14px 20px;
-  border-radius: 10px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  animation: slideInRight 0.3s ease;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-}
-
-.toast-success {
-  background: #065f46;
-  color: #a7f3d0;
-  border: 1px solid #047857;
-}
-
-.toast-error {
-  background: #7f1d1d;
-  color: #fecaca;
-  border: 1px solid #991b1b;
-}
-
-@keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-/* ============================================
-   Tabs
-   ============================================ */
-
-.tab-list {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: var(--modal-bg);
-  border-radius: 10px;
-  border: 1px solid var(--border);
-}
-
-.tab-trigger {
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--table-header-text);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  background: none;
-}
-
-.tab-trigger:hover {
-  color: var(--foreground);
-  background: var(--table-row-hover);
-}
-
-.tab-trigger[data-state="active"],
-.tab-trigger.active {
-  background: #6366f1;
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-}
-
-/* ============================================
-   React Select custom theme (dark mode)
-   ============================================ */
-
-.react-select-container .react-select__control {
-  background: var(--input-bg) !important;
-  border-color: var(--border) !important;
-  border-radius: 8px !important;
-  min-height: 42px !important;
-  box-shadow: none !important;
-}
-
-.react-select-container .react-select__control:hover {
-  border-color: var(--muted-foreground) !important;
-}
-
-.react-select-container .react-select__control--is-focused {
-  border-color: #6366f1 !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
-}
-
-.react-select-container .react-select__menu {
-  background: var(--modal-bg) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 8px !important;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4) !important;
-}
-
-.react-select-container .react-select__option {
-  color: var(--foreground) !important;
-}
-
-.react-select-container .react-select__option--is-focused {
-  background: var(--secondary) !important;
-}
-
-.react-select-container .react-select__option--is-selected {
-  background: #6366f1 !important;
-  color: #ffffff !important;
-}
-
-.react-select-container .react-select__multi-value {
-  background: var(--secondary) !important;
-  border-radius: 6px !important;
-}
-
-.react-select-container .react-select__multi-value__label {
-  color: var(--foreground) !important;
-}
-
-.react-select-container .react-select__multi-value__remove:hover {
-  background: #ef4444 !important;
-  color: #ffffff !important;
-}
-
-.react-select-container .react-select__input-container,
-.react-select-container .react-select__single-value,
-.react-select-container .react-select__placeholder {
-  color: var(--muted-foreground) !important;
-}
-
-.react-select-container .react-select__input {
-  color: var(--foreground) !important;
-}
-
-.react-select-container .react-select__indicator-separator {
-  background: var(--border) !important;
-}
-
-.react-select-container .react-select__indicator {
-  color: var(--muted-foreground) !important;
 }

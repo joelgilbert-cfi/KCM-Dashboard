@@ -1,78 +1,59 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase';
 import type { User } from '@/lib/types';
 
-/**
- * Hook to get the current authenticated user and their role.
- * Returns user data from the `users` table (not just auth).
- */
 export function useUser() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
-  const fetchUser = useCallback(async () => {
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-
-      if (!authUser) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch full user record from the users table
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', authUser.email!)
-        .single();
-
-      if (error || !data) {
-        // If user doesn't exist in our users table yet, create a basic record
-        console.warn('User not found in users table:', authUser.email);
-        setUser({
-          id: authUser.id,
-          name: authUser.email?.split('@')[0] || 'Unknown',
-          email: authUser.email || '',
-          role: 'expansion', // Default role
-          created_at: new Date().toISOString(),
-        });
-      } else {
-        setUser(data as User);
-      }
-    } catch (err) {
-      console.error('Error fetching user:', err);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [supabase]);
-
   useEffect(() => {
-    fetchUser();
+    async function getUser() {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const { data } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', authUser.id)
+            .single();
+          setUser(data as User | null);
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-    // Listen for auth state changes
+    getUser();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session) {
-          fetchUser();
+      async (_event, session) => {
+        if (session?.user) {
+          const { data } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          setUser(data as User | null);
         } else {
           setUser(null);
-          setLoading(false);
         }
+        setLoading(false);
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [fetchUser, supabase.auth]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    window.location.href = '/login';
   };
 
-  return { user, loading, signOut, refetch: fetchUser };
+  return { user, loading, signOut };
 }

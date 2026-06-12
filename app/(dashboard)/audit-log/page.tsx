@@ -1,293 +1,270 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { ScrollText, Search, Filter, ChevronDown } from 'lucide-react';
-import { cn, formatDate } from '@/lib/utils';
-import type { AuditLogEntry, User } from '@/lib/types';
+import { createClient } from '@/lib/supabase';
+import type { AuditLog } from '@/lib/types';
+import { formatDate } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Loader2, ScrollText, Search, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-interface AuditLogWithUser extends AuditLogEntry {
-  users: User | null;
-}
+const TRACKED_TABLES = [
+  'closure_tracker',
+  'fixed_asset_register',
+  'asset_movements',
+  'asset_sales',
+  'closure_requests',
+];
 
 export default function AuditLogPage() {
-  const [logs, setLogs] = useState<AuditLogWithUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [tableFilter, setTableFilter] = useState('all');
-  const [actionFilter, setActionFilter] = useState('all');
-  const [showFilters, setShowFilters] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const supabase = createClient();
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filterTable, setFilterTable] = useState<string>('all');
+  const [filterAction, setFilterAction] = useState<string>('all');
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
   useEffect(() => {
     async function fetchLogs() {
-      const { data, error } = await supabase
+      let query = supabase
         .from('audit_log')
-        .select('*, users(*)')
+        .select('*')
         .order('changed_at', { ascending: false })
         .limit(200);
 
-      if (error) {
-        console.error(error);
-        return;
+      if (filterTable !== 'all') {
+        query = query.eq('table_name', filterTable);
+      }
+      if (filterAction !== 'all') {
+        query = query.eq('action', filterAction);
       }
 
-      setLogs((data || []) as AuditLogWithUser[]);
+      const { data, error } = await query;
+      if (!error && data) {
+        setLogs(data as AuditLog[]);
+      }
       setLoading(false);
     }
-
     fetchLogs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [filterTable, filterAction]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const tables = [...new Set(logs.map((l) => l.table_name))];
-
-  const filteredLogs = logs.filter((log) => {
-    const matchesSearch =
-      !searchQuery ||
-      log.table_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.users?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      JSON.stringify(log.new_data)
-        ?.toLowerCase()
-        .includes(searchQuery.toLowerCase());
-
-    const matchesTable =
-      tableFilter === 'all' || log.table_name === tableFilter;
-
-    const matchesAction =
-      actionFilter === 'all' || log.action === actionFilter;
-
-    return matchesSearch && matchesTable && matchesAction;
+  const filtered = logs.filter((log) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      log.table_name?.toLowerCase().includes(q) ||
+      log.record_id?.toLowerCase().includes(q) ||
+      log.action?.toLowerCase().includes(q)
+    );
   });
 
-  function getActionBadge(action: string) {
+  const getActionBadge = (action: string) => {
     switch (action) {
       case 'INSERT':
-        return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+        return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">INSERT</Badge>;
       case 'UPDATE':
-        return 'bg-blue-500/15 text-blue-400 border-blue-500/30';
+        return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20">UPDATE</Badge>;
       case 'DELETE':
-        return 'bg-red-500/15 text-red-400 border-red-500/30';
+        return <Badge className="bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/20">DELETE</Badge>;
       default:
-        return 'bg-zinc-500/15 text-muted-foreground border-zinc-500/30';
+        return <Badge variant="secondary">{action}</Badge>;
     }
-  }
+  };
 
-  function renderDiff(
-    oldData: Record<string, unknown> | null,
-    newData: Record<string, unknown> | null
-  ) {
-    if (!oldData && !newData) return null;
-
-    if (!oldData) {
-      // INSERT — show all new values
-      return (
-        <div className="space-y-1">
-          {Object.entries(newData!).map(([key, value]) => (
-            <div key={key} className="flex gap-2 text-xs">
-              <span className="text-muted-foreground min-w-[140px]">{key}:</span>
-              <span className="text-emerald-400">
-                {String(value ?? 'null')}
-              </span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (!newData) {
-      // DELETE — show old values
-      return (
-        <div className="space-y-1">
-          {Object.entries(oldData).map(([key, value]) => (
-            <div key={key} className="flex gap-2 text-xs">
-              <span className="text-muted-foreground min-w-[140px]">{key}:</span>
-              <span className="text-red-400 line-through">
-                {String(value ?? 'null')}
-              </span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    // UPDATE — show changed fields only
-    const changedKeys = Object.keys(newData).filter(
-      (key) =>
-        JSON.stringify(oldData[key]) !== JSON.stringify(newData[key])
+  // Get changed fields for UPDATE actions
+  const getChangedFields = (log: AuditLog): string[] => {
+    if (log.action !== 'UPDATE' || !log.old_data || !log.new_data) return [];
+    return Object.keys(log.new_data).filter(
+      (k) => JSON.stringify(log.old_data![k]) !== JSON.stringify(log.new_data![k])
     );
-
-    if (changedKeys.length === 0) {
-      return (
-        <p className="text-xs text-zinc-600">No visible changes</p>
-      );
-    }
-
-    return (
-      <div className="space-y-1.5">
-        {changedKeys.map((key) => (
-          <div key={key} className="flex gap-2 text-xs">
-            <span className="text-muted-foreground min-w-[140px]">{key}:</span>
-            <span className="text-red-400 line-through mr-2">
-              {String(oldData[key] ?? 'null')}
-            </span>
-            <span className="text-muted-foreground">→</span>
-            <span className="text-emerald-400 ml-2">
-              {String(newData[key] ?? 'null')}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  };
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 w-48 skeleton" />
-        <div className="h-96 skeleton rounded-xl" />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-brand" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Audit Log</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Audit Log</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Complete trail of all data changes across the system
+          Complete change history across all tracked tables
         </p>
       </div>
 
-      {/* Log table */}
-      <div className="glass-card overflow-hidden">
-        <div className="p-5 border-b border-border/50 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="flex items-center gap-3">
-            <ScrollText className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-base font-semibold text-foreground">
-              All Changes
-            </h2>
-            <span className="badge bg-secondary text-muted-foreground border-zinc-700">
-              {filteredLogs.length}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="relative flex-1 sm:flex-initial">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search logs..."
-                className="form-input pl-9 py-2 text-sm w-full sm:w-[200px]"
+      <Card className="border-border/60">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="audit-search"
+                placeholder="Search by table, record ID..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
               />
             </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(
-                'btn btn-secondary btn-sm',
-                showFilters &&
-                  'bg-indigo-500/15 border-indigo-500/30 text-indigo-400'
-              )}
-            >
-              <Filter className="w-3.5 h-3.5" />
-              Filters
-            </button>
+            <Select value={filterTable} onValueChange={(v) => setFilterTable(v ?? 'all')}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Table" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Tables</SelectItem>
+                {TRACKED_TABLES.map((t) => (
+                  <SelectItem key={t} value={t}>{t.replace(/_/g, ' ')}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterAction} onValueChange={(v) => setFilterAction(v ?? 'all')}>
+              <SelectTrigger className="w-full sm:w-36">
+                <SelectValue placeholder="Action" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Actions</SelectItem>
+                <SelectItem value="INSERT">INSERT</SelectItem>
+                <SelectItem value="UPDATE">UPDATE</SelectItem>
+                <SelectItem value="DELETE">DELETE</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
+        </CardHeader>
+        <CardContent>
+          {filtered.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <ScrollText className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No audit log entries found</p>
+            </div>
+          ) : (
+            <div className="rounded-lg border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="text-xs font-semibold">Action</TableHead>
+                    <TableHead className="text-xs font-semibold">Table</TableHead>
+                    <TableHead className="text-xs font-semibold">When</TableHead>
+                    <TableHead className="text-xs font-semibold">Changed Fields</TableHead>
+                    <TableHead className="w-10" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((log) => {
+                    const changed = getChangedFields(log);
+                    return (
+                      <TableRow key={log.id}>
+                        <TableCell>{getActionBadge(log.action)}</TableCell>
+                        <TableCell className="text-sm font-medium">
+                          {log.table_name.replace(/_/g, ' ')}
+                        </TableCell>
+                        <TableCell className="text-sm">{formatDate(log.changed_at)}</TableCell>
+                        <TableCell className="max-w-[300px]">
+                          {changed.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {changed.slice(0, 4).map((f) => (
+                                <Badge key={f} variant="secondary" className="text-xs">
+                                  {f}
+                                </Badge>
+                              ))}
+                              {changed.length > 4 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{changed.length - 4} more
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setSelectedLog(log)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {showFilters && (
-          <div className="px-5 py-3 border-b border-border/50 flex gap-4 bg-card/50">
-            <select
-              value={tableFilter}
-              onChange={(e) => setTableFilter(e.target.value)}
-              className="form-input py-1.5 text-sm w-auto"
-            >
-              <option value="all">All Tables</option>
-              {tables.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-            <select
-              value={actionFilter}
-              onChange={(e) => setActionFilter(e.target.value)}
-              className="form-input py-1.5 text-sm w-auto"
-            >
-              <option value="all">All Actions</option>
-              <option value="INSERT">INSERT</option>
-              <option value="UPDATE">UPDATE</option>
-              <option value="DELETE">DELETE</option>
-            </select>
-          </div>
-        )}
-
-        {filteredLogs.length === 0 ? (
-          <div className="p-12 text-center">
-            <ScrollText className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
-            <p className="text-muted-foreground text-sm">No audit log entries</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-zinc-800/30">
-            {filteredLogs.map((log) => {
-              const isExpanded = expandedId === log.id;
-              return (
-                <div key={log.id}>
-                  <div
-                    className="flex items-center px-5 py-3.5 cursor-pointer hover:bg-secondary/20 transition-colors"
-                    onClick={() =>
-                      setExpandedId(isExpanded ? null : log.id)
-                    }
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {isExpanded ? (
-                        <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0 -rotate-90" />
-                      )}
-
-                      <span
-                        className={cn('badge', getActionBadge(log.action))}
-                      >
-                        {log.action}
-                      </span>
-
-                      <span className="font-medium text-foreground text-sm">
-                        {log.table_name}
-                      </span>
-
-                      <span className="text-xs text-zinc-600">
-                        {log.record_id.slice(0, 8)}...
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-4 flex-shrink-0">
-                      <span className="text-xs text-muted-foreground">
-                        {log.users?.name || 'System'}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(log.changed_at, 'dd MMM yyyy HH:mm')}
-                      </span>
-                    </div>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="bg-card/30 px-5 pb-4">
-                      <div className="ml-7 p-4 rounded-lg bg-secondary/30 border border-border/50">
-                        {renderDiff(log.old_data, log.new_data)}
-                      </div>
-                    </div>
-                  )}
+      {/* Detail Dialog */}
+      <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Audit Log Detail — {selectedLog?.action} on {selectedLog?.table_name}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedLog && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Record ID:</span>
+                  <p className="font-mono text-xs mt-0.5">{selectedLog.record_id}</p>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                <div>
+                  <span className="text-muted-foreground">When:</span>
+                  <p className="mt-0.5">{formatDate(selectedLog.changed_at)}</p>
+                </div>
+              </div>
+
+              {selectedLog.old_data && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2">Old Data</h4>
+                  <pre className="rounded-lg bg-muted/50 p-3 text-xs overflow-x-auto max-h-48">
+                    {JSON.stringify(selectedLog.old_data, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {selectedLog.new_data && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2">New Data</h4>
+                  <pre className="rounded-lg bg-muted/50 p-3 text-xs overflow-x-auto max-h-48">
+                    {JSON.stringify(selectedLog.new_data, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

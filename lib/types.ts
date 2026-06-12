@@ -1,6 +1,5 @@
-// ============================================
-// Database Types — matches Supabase schema
-// ============================================
+// TypeScript types for all 9 database tables
+// Matches the SQL schema from the project plan
 
 export type UserRole = 'finance' | 'expansion' | 'admin';
 
@@ -12,22 +11,19 @@ export interface User {
   created_at: string;
 }
 
-export type ClusterStatus = 'Active' | 'Under Closure' | 'Closed';
-export type KitchenFormat = 'Cloud' | 'Restaurant' | 'Takeaway';
+export type KitchenStatus = 'Active' | 'Under Closure' | 'Closed';
 
-export interface Cluster {
+export interface KitchenMaster {
   id: string;
   cluster_marker: string;
-  brand: string | null;
+  brand: string;
   kitchen_name: string | null;
   format: string | null;
-  status: ClusterStatus;
+  status: KitchenStatus;
   added_by: string | null;
   added_at: string;
   removed_at: string | null;
 }
-
-
 
 export type ClosureRequestStatus = 'Draft' | 'Sent';
 
@@ -39,40 +35,55 @@ export interface ClosureRequest {
   cc_emails: string[];
   email_sent_at: string | null;
   created_at: string;
+  // Joined fields
+  requester?: User;
+  clusters?: ClosureRequestCluster[];
 }
 
 export interface ClosureRequestCluster {
   id: string;
   request_id: string;
-  cluster_id: string;
+  cluster_marker: string;
 }
-
-export type LockInStatus = 'Yes' | 'No' | 'Closed';
-export type ClosureProgress = 'Initiated' | 'In Progress' | 'Completed';
 
 export interface ClosureTracker {
   id: string;
+  // Identity
   cluster_marker: string;
-  ops_closed: boolean;
+  kitchen_name: string | null;
+  oracle_code: string | null;
+  // Cluster info
+  rent: number | null;
+  city: string | null;
+  zone: string | null;
+  format: string | null;
+  entity: string | null;
+  // Status fields
+  status_31_march: string | null;
+  reason_for_change: string | null;
+  lock_in: string | null;
+  lock_in_end_date: string | null;
+  ops_closed: string | null;
   last_ops_date: string | null;
   last_rent_date: string | null;
-  ll_clearance: boolean | null;
-  lock_in: LockInStatus | null;
-  lock_in_end_date: string | null;
+  ll_clearance: string | null;
+  shut_suspend_continue: string | null;
+  // Financial fields
+  dec_net_revenue: number | null;
+  dec_ebitda: number | null;
   sd: number | null;
   sd_adjustment: number | null;
   sd_recovery: number | null;
+  // Remarks and other
+  remarks: string | null;
   notice_period: string | null;
-  dec_net_revenue: number | null;
-  dec_ebitda: number | null;
+  remarks_2: string | null;
   rental_hit_lock_in: number | null;
   capex: number | null;
   framework: number | null;
   closure_phasing: number | null;
   hr_remarks: string | null;
-  remarks: string | null;
-  on_hold: boolean;
-  progress: ClosureProgress | null;
+  // Metadata
   updated_by: string | null;
   updated_at: string;
 }
@@ -80,9 +91,9 @@ export interface ClosureTracker {
 export type AssetCondition = 'Good' | 'Fair' | 'Poor' | 'Damaged';
 export type AssetStatus = 'In Kitchen' | 'Moved to Warehouse' | 'Sold' | 'Disposed';
 
-export interface FixedAsset {
+export interface FixedAssetRegister {
   id: string;
-  cluster_id: string;
+  kitchen_id: string;
   asset_name: string;
   category: string | null;
   purchase_date: string | null;
@@ -90,34 +101,50 @@ export interface FixedAsset {
   condition: AssetCondition | null;
   current_status: AssetStatus;
   created_at: string;
+  // Joined fields
+  kitchen?: KitchenMaster;
 }
 
 export interface AssetMovement {
   id: string;
-  asset_id: string;
-  cluster_id: string;
-  moved_to: string;
-  movement_date: string;
-  notes: string | null;
+  from_location: string | null;
+  from_oracle_code: string | null;
+  to_location: string | null;
+  to_oracle_code: string | null;
+  item_name: string | null;
+  quantity: number | null;
+  movement_date: string | null;
+  asset_id: string | null;
+  kitchen_id: string | null;
   logged_by: string | null;
   created_at: string;
+  // Joined fields
+  asset?: FixedAssetRegister;
+  kitchen?: KitchenMaster;
+  logger?: User;
 }
 
 export interface AssetSale {
   id: string;
-  asset_id: string;
-  cluster_id: string;
+  asset_id: string | null;
+  kitchen_id: string | null;
+  item_name: string | null;
+  quantity: number | null;
   sale_price: number | null;
   buyer: string | null;
-  sale_date: string;
+  sale_date: string | null;
   notes: string | null;
   logged_by: string | null;
   created_at: string;
+  // Joined fields
+  asset?: FixedAssetRegister;
+  kitchen?: KitchenMaster;
+  logger?: User;
 }
 
 export type AuditAction = 'INSERT' | 'UPDATE' | 'DELETE';
 
-export interface AuditLogEntry {
+export interface AuditLog {
   id: string;
   table_name: string;
   record_id: string;
@@ -126,41 +153,6 @@ export interface AuditLogEntry {
   changed_at: string;
   old_data: Record<string, unknown> | null;
   new_data: Record<string, unknown> | null;
-}
-
-// ============================================
-// Extended types with joins
-// ============================================
-
-
-
-export interface ClusterWithTracker extends Cluster {
-  closure_tracker: ClosureTracker[];
-}
-
-export interface ClosureRequestWithClusters extends ClosureRequest {
-  closure_request_clusters: (ClosureRequestCluster & {
-    clusters: Cluster;
-  })[];
-  users: User;
-}
-
-export interface FixedAssetWithKitchen extends FixedAsset {
-  clusters: Cluster;
-}
-
-export interface AssetMovementWithDetails extends AssetMovement {
-  fixed_asset_register: FixedAsset;
-  clusters: Cluster;
-  users: User | null;
-}
-
-export interface AssetSaleWithDetails extends AssetSale {
-  fixed_asset_register: FixedAsset;
-  clusters: Cluster;
-  users: User | null;
-}
-
-export interface AuditLogWithUser extends AuditLogEntry {
-  users: User | null;
+  // Joined fields
+  changer?: User;
 }

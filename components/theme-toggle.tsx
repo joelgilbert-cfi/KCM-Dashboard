@@ -1,54 +1,30 @@
 'use client';
 
-import * as React from 'react';
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Laptop } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { Sun, Moon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <div className="h-10 w-full bg-secondary/50 animate-pulse rounded-lg" />;
-  }
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <Button variant="ghost" size="icon" className="h-9 w-9" />;
 
   return (
-    <div className="flex items-center gap-1 p-1 bg-secondary border border-border rounded-lg mt-4">
-      <button
-        onClick={() => setTheme('light')}
-        className={cn(
-          'flex-1 flex justify-center p-2 rounded-md transition-all',
-          theme === 'light' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
-        )}
-        title="Light Mode"
-      >
-        <Sun className="w-4 h-4" />
-      </button>
-      <button
-        onClick={() => setTheme('system')}
-        className={cn(
-          'flex-1 flex justify-center p-2 rounded-md transition-all',
-          theme === 'system' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
-        )}
-        title="System Theme"
-      >
-        <Laptop className="w-4 h-4" />
-      </button>
-      <button
-        onClick={() => setTheme('dark')}
-        className={cn(
-          'flex-1 flex justify-center p-2 rounded-md transition-all',
-          theme === 'dark' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
-        )}
-        title="Dark Mode"
-      >
-        <Moon className="w-4 h-4" />
-      </button>
-    </div>
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-9 w-9 text-foreground/70 hover:text-foreground transition-colors"
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      aria-label="Toggle theme"
+    >
+      {theme === 'dark' ? (
+        <Sun className="h-[1.15rem] w-[1.15rem]" />
+      ) : (
+        <Moon className="h-[1.15rem] w-[1.15rem]" />
+      )}
+    </Button>
   );
 }

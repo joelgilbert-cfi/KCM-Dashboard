@@ -1,528 +1,434 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useUser } from '@/hooks/use-user';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase';
+import { useUser } from '@/hooks/use-user';
+import type { KitchenMaster } from '@/lib/types';
+import { formatDateForEmail } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  ArrowLeft,
+  Check,
+  ChevronsUpDown,
+  Loader2,
   Mail,
   Send,
-  Eye,
   X,
-  Search,
-  Check,
-  Loader2,
-  Building2,
-  AlertTriangle,
+  Eye,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import EmailTagInput from '@/components/email-tag-input';
-import type { Cluster, Kitchen } from '@/lib/types';
-import { format } from 'date-fns';
+import Link from 'next/link';
+import dynamic from 'next/dynamic';
 
-interface ClusterWithKitchens extends Cluster {
-  kitchens: Kitchen[];
+// Dynamically import react-select to avoid SSR issues
+const CreatableSelect = dynamic(() => import('react-select/creatable'), { ssr: false });
+
+interface EmailOption {
+  label: string;
+  value: string;
 }
 
 export default function NewClosureRequestPage() {
-  const { user } = useUser();
   const router = useRouter();
+  const { user } = useUser();
   const supabase = createClient();
 
-  const [clusters, setClusters] = useState<ClusterWithKitchens[]>([]);
-  const [selectedClusterIds, setSelectedClusterIds] = useState<Set<string>>(
-    new Set()
-  );
-  const [toEmails, setToEmails] = useState<string[]>([]);
-  const [ccEmails, setCcEmails] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
-  const [sending, setSending] = useState(false);
+  const [kitchens, setKitchens] = useState<KitchenMaster[]>([]);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: 'success' | 'error';
-  } | null>(null);
+  const [sending, setSending] = useState(false);
 
-  const isFinance = user?.role === 'finance' || user?.role === 'admin';
+  // Selected clusters
+  const [selectedClusters, setSelectedClusters] = useState<string[]>([]);
+  const [clusterSearchOpen, setClusterSearchOpen] = useState(false);
+
+  // Email recipients
+  const [toEmails, setToEmails] = useState<EmailOption[]>([]);
+  const [ccEmails, setCcEmails] = useState<EmailOption[]>([]);
+
+  // Preview modal
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
-    async function fetchClusters() {
-      const { data, error } = await supabase
-        .from('clusters')
-        .select('*, kitchens(*)')
-        .eq('status', 'Active')
+    async function fetchKitchens() {
+      const { data } = await supabase
+        .from('kitchen_master')
+        .select('*')
         .is('removed_at', null)
         .order('cluster_marker', { ascending: true });
 
-      if (error) {
-        console.error(error);
-        return;
-      }
-
-      // Filter out soft-deleted kitchens
-      const cleaned = (data || []).map((c: ClusterWithKitchens) => ({
-        ...c,
-        kitchens: c.kitchens.filter((k: Kitchen) => !k.removed_at),
-      }));
-
-      setClusters(cleaned);
+      if (data) setKitchens(data as KitchenMaster[]);
       setLoading(false);
     }
+    fetchKitchens();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    fetchClusters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Get unique cluster markers
+  const uniqueClusters = useMemo(() => {
+    const clusters = new Map<string, string>();
+    kitchens.forEach((k) => {
+      if (!clusters.has(k.cluster_marker)) {
+        clusters.set(k.cluster_marker, k.kitchen_name || k.cluster_marker);
+      }
+    });
+    return Array.from(clusters.entries()).map(([marker, name]) => ({
+      marker,
+      name,
+    }));
+  }, [kitchens]);
 
-  function toggleCluster(id: string) {
-    const next = new Set(selectedClusterIds);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    setSelectedClusterIds(next);
-  }
+  // Get brands for selected clusters
+  const selectedBrands = useMemo(() => {
+    return kitchens.filter((k) => selectedClusters.includes(k.cluster_marker));
+  }, [kitchens, selectedClusters]);
 
-  function showToast(message: string, type: 'success' | 'error') {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  }
+  const toggleCluster = (marker: string) => {
+    setSelectedClusters((prev) =>
+      prev.includes(marker) ? prev.filter((c) => c !== marker) : [...prev, marker]
+    );
+  };
 
-  // Generate the email preview table rows
-  const selectedClusters = clusters.filter((c) =>
-    selectedClusterIds.has(c.id)
-  );
+  const canSend = selectedClusters.length > 0 && toEmails.length > 0;
 
-  const emailRows = selectedClusters.flatMap((cluster) =>
-    cluster.kitchens.map((kitchen) => ({
-      cluster_marker: cluster.cluster_marker,
-      brand: kitchen.brand,
-      kitchen_name: cluster.ops_name || cluster.finance_name || '—',
-      city: cluster.city || '—',
-    }))
-  );
-
-  // Filtered clusters for search
-  const filteredClusters = clusters.filter(
-    (c) =>
-      !searchQuery ||
-      c.cluster_marker.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.ops_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.city?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  async function handleSendEmail() {
-    if (
-      !isFinance ||
-      selectedClusterIds.size === 0 ||
-      toEmails.length === 0
-    ) {
-      return;
-    }
-
+  const handleSend = async () => {
+    if (!canSend || !user) return;
     setSending(true);
+
     try {
-      // 1. Create closure request record
-      const { data: request, error: requestError } = await supabase
+      // Create closure request record
+      const { data: request, error: reqError } = await supabase
         .from('closure_requests')
         .insert({
-          requested_by: user!.id,
+          requested_by: user.id,
           status: 'Sent',
-          to_emails: toEmails,
-          cc_emails: ccEmails,
+          to_emails: toEmails.map((e) => e.value),
+          cc_emails: ccEmails.map((e) => e.value),
           email_sent_at: new Date().toISOString(),
         })
         .select()
         .single();
 
-      if (requestError) throw requestError;
+      if (reqError || !request) throw reqError;
 
-      // 2. Link clusters to this request
-      const clusterLinks = Array.from(selectedClusterIds).map(
-        (cluster_id) => ({
-          request_id: request.id,
-          cluster_id,
-        })
-      );
+      // Insert cluster linkages
+      const clusterInserts = selectedClusters.map((marker) => ({
+        request_id: request.id,
+        cluster_marker: marker,
+      }));
+      await supabase.from('closure_request_clusters').insert(clusterInserts);
 
-      const { error: linkError } = await supabase
-        .from('closure_request_clusters')
-        .insert(clusterLinks);
-
-      if (linkError) throw linkError;
-
-      // 3. Update cluster statuses to "Under Closure"
-      const { error: statusError } = await supabase
-        .from('clusters')
-        .update({ status: 'Under Closure' })
-        .in('id', Array.from(selectedClusterIds));
-
-      if (statusError) throw statusError;
-
-      // 4. Create initial closure tracker entries
-      const trackerEntries = Array.from(selectedClusterIds).map(
-        (cluster_id) => ({
-          cluster_id,
-          progress: 'Initiated' as const,
-          updated_by: user!.id,
-        })
-      );
-
-      await supabase.from('closure_tracker').insert(trackerEntries);
-
-      // 5. Send email via API route
-      const emailResponse = await fetch('/api/send-closure-email', {
+      // Send email via API route
+      await fetch('/api/send-closure-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: toEmails,
-          cc: ccEmails,
-          rows: emailRows,
-          senderName: user!.name,
-          senderEmail: user!.email,
+          toEmails: toEmails.map((e) => e.value),
+          ccEmails: ccEmails.map((e) => e.value),
+          senderName: user.name,
+          brands: selectedBrands.map((b) => ({
+            cluster_marker: b.cluster_marker,
+            brand: b.brand,
+            kitchen_name: b.kitchen_name || '',
+          })),
         }),
       });
 
-      if (!emailResponse.ok) {
-        console.warn('Email sending failed, but records were saved');
-      }
-
-      showToast('Closure request sent successfully!', 'success');
-      setShowPreview(false);
-
-      // Redirect to closure requests list
-      setTimeout(() => {
-        router.push('/closure-requests');
-      }, 1500);
-    } catch (err) {
-      console.error('Error sending closure request:', err);
-      showToast('Failed to send closure request', 'error');
+      router.push('/closure-requests');
+    } catch (error) {
+      console.error('Error sending closure request:', error);
     } finally {
       setSending(false);
     }
-  }
+  };
 
-  if (!isFinance) {
+  // Custom styles for react-select to match shadcn theme
+  const selectStyles = {
+    control: (base: Record<string, unknown>) => ({
+      ...base,
+      backgroundColor: 'var(--color-card)',
+      borderColor: 'var(--color-border)',
+      borderRadius: 'var(--radius-md)',
+      minHeight: '2.5rem',
+      fontSize: '0.875rem',
+    }),
+    menu: (base: Record<string, unknown>) => ({
+      ...base,
+      backgroundColor: 'var(--color-card)',
+      border: '1px solid var(--color-border)',
+      borderRadius: 'var(--radius-md)',
+    }),
+    option: (base: Record<string, unknown>, state: { isFocused: boolean }) => ({
+      ...base,
+      backgroundColor: state.isFocused ? 'var(--color-accent)' : 'transparent',
+      fontSize: '0.875rem',
+    }),
+    multiValue: (base: Record<string, unknown>) => ({
+      ...base,
+      backgroundColor: 'var(--color-secondary)',
+      borderRadius: 'var(--radius-sm)',
+    }),
+    input: (base: Record<string, unknown>) => ({
+      ...base,
+      color: 'var(--color-foreground)',
+    }),
+  };
+
+  if (loading) {
     return (
-      <div className="text-center py-20">
-        <AlertTriangle className="w-16 h-16 text-amber-500/50 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-foreground mb-2">
-          Access Restricted
-        </h2>
-        <p className="text-muted-foreground">
-          Only Business Finance team can create closure requests.
-        </p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-brand" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">
-          New Closure Request
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Select clusters to close and send the notification email
-        </p>
-      </div>
-
-      {/* Email recipients */}
-      <div className="glass-card p-6 space-y-5">
-        <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-          <Mail className="w-4 h-4 text-indigo-400" />
-          Email Recipients
-        </h2>
-
+    <div className="space-y-6 max-w-3xl">
+      <div className="flex items-center gap-3">
+        <Link href="/closure-requests">
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
         <div>
-          <label className="form-label">
-            To <span className="text-red-400">*</span>
-          </label>
-          <EmailTagInput
-            value={toEmails}
-            onChange={setToEmails}
-            placeholder="Add recipients..."
-            id="to-emails"
-          />
-        </div>
-
-        <div>
-          <label className="form-label">CC</label>
-          <EmailTagInput
-            value={ccEmails}
-            onChange={setCcEmails}
-            placeholder="Add CC recipients..."
-            id="cc-emails"
-          />
+          <h1 className="text-2xl font-bold tracking-tight">New Closure Request</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Select clusters and recipients, then preview and send
+          </p>
         </div>
       </div>
 
-      {/* Cluster selection */}
-      <div className="glass-card overflow-hidden">
-        <div className="p-5 border-b border-border/50 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Building2 className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-base font-semibold text-foreground">
-              Select Clusters
-            </h2>
-            {selectedClusterIds.size > 0 && (
-              <span className="badge bg-indigo-500/15 text-indigo-400 border-indigo-500/30">
-                {selectedClusterIds.size} selected
+      {/* Step 1: Select Clusters */}
+      <Card className="border-border/60">
+        <CardHeader>
+          <CardTitle className="text-base">1. Select Clusters</CardTitle>
+          <CardDescription>Choose which clusters to include in the closure request</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Popover open={clusterSearchOpen} onOpenChange={setClusterSearchOpen}>
+            <PopoverTrigger
+              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <span>
+                {selectedClusters.length > 0
+                  ? `${selectedClusters.length} cluster(s) selected`
+                  : 'Select clusters...'}
               </span>
-            )}
-          </div>
+              <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search clusters..." />
+                <CommandList>
+                  <CommandEmpty>No clusters found.</CommandEmpty>
+                  <CommandGroup>
+                    {uniqueClusters.map((cluster) => (
+                      <CommandItem
+                        key={cluster.marker}
+                        onSelect={() => toggleCluster(cluster.marker)}
+                      >
+                        <Check
+                          className={`mr-2 h-4 w-4 ${
+                            selectedClusters.includes(cluster.marker) ? 'opacity-100' : 'opacity-0'
+                          }`}
+                        />
+                        <span className="font-medium">{cluster.marker}</span>
+                        <span className="ml-2 text-muted-foreground text-xs">{cluster.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search..."
-              className="form-input pl-9 py-2 text-sm w-[200px]"
+          {selectedClusters.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {selectedClusters.map((marker) => (
+                <Badge key={marker} variant="secondary" className="text-sm gap-1">
+                  {marker}
+                  <button
+                    onClick={() => toggleCluster(marker)}
+                    className="ml-1 hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Step 2: Email Recipients */}
+      <Card className="border-border/60">
+        <CardHeader>
+          <CardTitle className="text-base">2. Email Recipients</CardTitle>
+          <CardDescription>Add To and CC email addresses — type and press Enter</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label className="text-sm mb-2 block">To *</Label>
+            <CreatableSelect
+              isMulti
+              value={toEmails}
+              onChange={(val) => setToEmails(val as EmailOption[])}
+              placeholder="Type email and press Enter..."
+              styles={selectStyles}
+              formatCreateLabel={(input: string) => `Add "${input}"`}
             />
           </div>
-        </div>
-
-        {loading ? (
-          <div className="p-8">
-            <div className="h-48 skeleton rounded-lg" />
+          <div>
+            <Label className="text-sm mb-2 block">CC</Label>
+            <CreatableSelect
+              isMulti
+              value={ccEmails}
+              onChange={(val) => setCcEmails(val as EmailOption[])}
+              placeholder="Type email and press Enter..."
+              styles={selectStyles}
+              formatCreateLabel={(input: string) => `Add "${input}"`}
+            />
           </div>
-        ) : (
-          <div className="max-h-[400px] overflow-y-auto divide-y divide-zinc-800/30">
-            {filteredClusters.map((cluster) => {
-              const isSelected = selectedClusterIds.has(cluster.id);
-              return (
-                <label
-                  key={cluster.id}
-                  className={cn(
-                    'flex items-center px-5 py-3.5 cursor-pointer transition-colors',
-                    isSelected
-                      ? 'bg-indigo-500/5'
-                      : 'hover:bg-secondary/20'
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'w-5 h-5 rounded-md border-2 flex items-center justify-center mr-4 transition-all flex-shrink-0',
-                      isSelected
-                        ? 'bg-indigo-500 border-indigo-500'
-                        : 'border-zinc-600'
-                    )}
-                    onClick={() => toggleCluster(cluster.id)}
-                  >
-                    {isSelected && (
-                      <Check className="w-3 h-3 text-white" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground">
-                      Cluster {cluster.cluster_marker}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {cluster.ops_name || cluster.finance_name || 'Unnamed'}{' '}
-                      • {cluster.city || 'No city'} •{' '}
-                      {cluster.kitchens.length} brands
-                    </p>
-                  </div>
-
-                  <div className="flex gap-1.5 flex-shrink-0 ml-4">
-                    {cluster.kitchens.slice(0, 4).map((k) => (
-                      <span
-                        key={k.id}
-                        className="px-1.5 py-0.5 bg-secondary rounded text-[10px] text-muted-foreground"
-                      >
-                        {k.brand}
-                      </span>
-                    ))}
-                    {cluster.kitchens.length > 4 && (
-                      <span className="px-1.5 py-0.5 bg-secondary rounded text-[10px] text-muted-foreground">
-                        +{cluster.kitchens.length - 4}
-                      </span>
-                    )}
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3">
-        <button
-          onClick={() => router.back()}
-          className="btn btn-secondary"
-        >
-          Cancel
-        </button>
-        <button
+      <div className="flex gap-3 justify-end">
+        <Button
+          variant="outline"
           onClick={() => setShowPreview(true)}
-          disabled={selectedClusterIds.size === 0 || toEmails.length === 0}
-          className="btn btn-primary"
+          disabled={!canSend}
         >
-          <Eye className="w-4 h-4" />
+          <Eye className="mr-2 h-4 w-4" />
           Preview Email
-        </button>
+        </Button>
+        <Button
+          onClick={() => setShowPreview(true)}
+          disabled={!canSend}
+          className="bg-brand hover:bg-brand-dark"
+        >
+          <Send className="mr-2 h-4 w-4" />
+          Preview & Send
+        </Button>
       </div>
 
       {/* Email Preview Modal */}
-      {showPreview && (
-        <div
-          className="modal-overlay"
-          onClick={() => !sending && setShowPreview(false)}
-        >
-          <div
-            className="modal-content p-0"
-            style={{ maxWidth: '720px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <h3 className="text-lg font-semibold text-foreground">
-                Email Preview
-              </h3>
-              <button
-                onClick={() => !sending && setShowPreview(false)}
-                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Email Preview
+            </DialogTitle>
+            <DialogDescription>Review the email before sending</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 text-sm">
+            <div className="rounded-lg border p-4 bg-muted/30 space-y-2">
+              <div>
+                <strong>Subject:</strong> Kitchen Closure Request — {formatDateForEmail()}
+              </div>
+              <div>
+                <strong>To:</strong> {toEmails.map((e) => e.value).join(', ')}
+              </div>
+              {ccEmails.length > 0 && (
+                <div>
+                  <strong>CC:</strong> {ccEmails.map((e) => e.value).join(', ')}
+                </div>
+              )}
             </div>
 
-            {/* Email content */}
-            <div className="px-6 py-5 space-y-4">
-              {/* Meta */}
-              <div className="space-y-2 text-sm">
-                <div className="flex gap-2">
-                  <span className="text-muted-foreground w-16">Subject:</span>
-                  <span className="text-foreground">
-                    Kitchen Closure Request —{' '}
-                    {format(new Date(), 'dd MMM yyyy')}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <span className="text-muted-foreground w-16">To:</span>
-                  <span className="text-foreground">
-                    {toEmails.join(', ')}
-                  </span>
-                </div>
-                {ccEmails.length > 0 && (
-                  <div className="flex gap-2">
-                    <span className="text-muted-foreground w-16">CC:</span>
-                    <span className="text-foreground">
-                      {ccEmails.join(', ')}
-                    </span>
-                  </div>
-                )}
+            <div className="rounded-lg border p-4">
+              <p className="mb-4">Hi Team,</p>
+              <p className="mb-4">Please find below the list of kitchens identified for closure:</p>
+
+              <div className="rounded border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs font-semibold">Cluster Marker</TableHead>
+                      <TableHead className="text-xs font-semibold">Brand</TableHead>
+                      <TableHead className="text-xs font-semibold">Kitchen Name</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedBrands.map((b) => (
+                      <TableRow key={`${b.cluster_marker}-${b.brand}`}>
+                        <TableCell className="font-medium">{b.cluster_marker}</TableCell>
+                        <TableCell>{b.brand}</TableCell>
+                        <TableCell>{b.kitchen_name || '—'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
 
-              <hr className="border-border" />
-
-              {/* Body */}
-              <div className="text-sm text-foreground space-y-4">
-                <p>Hi Team,</p>
-                <p>
-                  Please find below the list of kitchens identified for
-                  closure:
-                </p>
-
-                <div className="rounded-lg overflow-hidden border border-zinc-700">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-secondary/80">
-                        <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
-                          Cluster Marker
-                        </th>
-                        <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
-                          Brand
-                        </th>
-                        <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
-                          Kitchen Name
-                        </th>
-                        <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
-                          City
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-800">
-                      {emailRows.map((row, i) => (
-                        <tr
-                          key={i}
-                          className="hover:bg-secondary/30"
-                        >
-                          <td className="px-4 py-2 text-foreground font-medium">
-                            {row.cluster_marker}
-                          </td>
-                          <td className="px-4 py-2">{row.brand}</td>
-                          <td className="px-4 py-2">
-                            {row.kitchen_name}
-                          </td>
-                          <td className="px-4 py-2">{row.city}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <p>
-                  Kindly review and update the status on the dashboard.
-                </p>
-                <p>
-                  Regards,
-                  <br />
-                  {user?.name}
-                  <br />
-                  <span className="text-muted-foreground">{user?.email}</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Modal footer */}
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-border">
-              <button
-                onClick={() => setShowPreview(false)}
-                disabled={sending}
-                className="btn btn-secondary"
-              >
-                Back to Edit
-              </button>
-              <button
-                onClick={handleSendEmail}
-                disabled={sending}
-                className="btn btn-primary"
-              >
-                {sending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    Confirm & Send
-                  </>
-                )}
-              </button>
+              <p className="mt-4">
+                Please review and update the status on the dashboard:{' '}
+                <span className="text-brand underline">{process.env.NEXT_PUBLIC_APP_URL || 'https://kcm.curefoods.com'}</span>
+              </p>
+              <p className="mt-4">
+                Regards,
+                <br />
+                {user?.name || 'Finance Team'}
+              </p>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Toast */}
-      {toast && (
-        <div
-          className={cn(
-            'toast',
-            toast.type === 'success' ? 'toast-success' : 'toast-error'
-          )}
-        >
-          {toast.message}
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPreview(false)}>
+              Go Back
+            </Button>
+            <Button
+              onClick={handleSend}
+              disabled={sending}
+              className="bg-brand hover:bg-brand-dark"
+            >
+              {sending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Confirm & Send
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

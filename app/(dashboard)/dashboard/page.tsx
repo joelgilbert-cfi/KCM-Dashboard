@@ -1,386 +1,268 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase';
+import { useUser } from '@/hooks/use-user';
+import type { ClosureTracker } from '@/lib/types';
+import { formatDate, formatCurrency } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import {
   Building2,
-  TrendingDown,
-  AlertTriangle,
   CheckCircle2,
-  Pause,
   Clock,
+  AlertCircle,
   Search,
-  Filter,
-  ChevronDown,
-  ArrowUpRight,
+  Loader2,
+  ArrowUpDown,
 } from 'lucide-react';
-import { cn, formatDate, getStatusColor, getProgressColor } from '@/lib/utils';
-import type { Cluster, ClosureTracker } from '@/lib/types';
+import { Button } from '@/components/ui/button';
 
-interface DashboardStats {
-  total_clusters: number;
-  under_closure: number;
-  completed: number;
-  on_hold: number;
-  pending: number;
-}
-
-interface ClusterRow extends Cluster {
-  closure_tracker: ClosureTracker[];
-}
+type SortKey = 'cluster_marker' | 'kitchen_name' | 'city' | 'ops_closed' | 'updated_at';
+type SortDir = 'asc' | 'desc';
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStats>({
-    total_clusters: 0,
-    under_closure: 0,
-    completed: 0,
-    on_hold: 0,
-    pending: 0,
-  });
-  const [clusters, setClusters] = useState<ClusterRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [cityFilter, setCityFilter] = useState<string>('all');
-  const [showFilters, setShowFilters] = useState(false);
-
-  const supabase = createClient();
   const router = useRouter();
+  const { user, loading: userLoading } = useUser();
+  const [trackers, setTrackers] = useState<ClosureTracker[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('updated_at');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const supabase = createClient();
 
   useEffect(() => {
-    fetchDashboardData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    async function fetchTrackers() {
+      const { data, error } = await supabase
+        .from('closure_tracker')
+        .select('*')
+        .order('updated_at', { ascending: false });
 
-  async function fetchDashboardData() {
-    setLoading(true);
-    try {
-      // Fetch clusters with closure tracker
-      const { data: clusterData, error } = await supabase
-        .from('clusters')
-        .select('*, closure_tracker(*)')
-        .is('removed_at', null)
-        .order('cluster_marker', { ascending: true });
-
-      if (error) throw error;
-
-      const allClusters = (clusterData || []) as ClusterRow[];
-
-      // Calculate stats
-      const underClosure = allClusters.filter(
-        (c) => c.status === 'Under Closure'
-      );
-      const closed = allClusters.filter((c) => c.status === 'Closed');
-      const onHold = allClusters.filter((c) =>
-        c.closure_tracker?.some((t) => t.on_hold)
-      );
-      const pending = underClosure.filter(
-        (c) =>
-          !c.closure_tracker?.length ||
-          c.closure_tracker.some((t) => t.progress === 'Initiated')
-      );
-
-      setStats({
-        total_clusters: allClusters.length,
-        under_closure: underClosure.length,
-        completed: closed.length,
-        on_hold: onHold.length,
-        pending: pending.length,
-      });
-
-      // Show clusters under closure + closed on dashboard
-      setClusters(
-        allClusters.filter(
-          (c) => c.status === 'Under Closure' || c.status === 'Closed'
-        )
-      );
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-    } finally {
+      if (!error && data) {
+        setTrackers(data as ClosureTracker[]);
+      }
       setLoading(false);
     }
-  }
+    fetchTrackers();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Get unique cities for filter
-  const cities = [...new Set(clusters.map((c) => c.city).filter(Boolean))];
+  // Stats
+  const totalClusters = trackers.length;
+  const opsClosedCount = trackers.filter((t) => t.ops_closed === 'Yes').length;
+  const onHoldCount = trackers.filter(
+    (t) => t.shut_suspend_continue?.toLowerCase() === 'hold'
+  ).length;
+  const pendingCount = totalClusters - opsClosedCount - onHoldCount;
 
-  // Filter clusters
-  const filteredClusters = clusters.filter((cluster) => {
-    const matchesSearch =
-      !searchQuery ||
-      cluster.cluster_marker
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      cluster.ops_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cluster.finance_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cluster.city?.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filter + sort
+  const filtered = trackers
+    .filter((t) => {
+      const q = search.toLowerCase();
+      return (
+        t.cluster_marker?.toLowerCase().includes(q) ||
+        t.kitchen_name?.toLowerCase().includes(q) ||
+        t.city?.toLowerCase().includes(q) ||
+        t.oracle_code?.toLowerCase().includes(q) ||
+        t.entity?.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      const aVal = a[sortKey] ?? '';
+      const bVal = b[sortKey] ?? '';
+      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
 
-    const matchesStatus =
-      statusFilter === 'all' || cluster.status === statusFilter;
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
 
-    const matchesCity =
-      cityFilter === 'all' || cluster.city === cityFilter;
+  const getStatusBadge = (tracker: ClosureTracker) => {
+    if (tracker.ops_closed === 'Yes') {
+      return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Closed</Badge>;
+    }
+    if (tracker.shut_suspend_continue?.toLowerCase() === 'hold') {
+      return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/20">On Hold</Badge>;
+    }
+    return <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20">In Progress</Badge>;
+  };
 
-    return matchesSearch && matchesStatus && matchesCity;
-  });
-
-  const statCards = [
-    {
-      label: 'Under Closure',
-      value: stats.under_closure,
-      icon: TrendingDown,
-      color: 'from-amber-500/20 to-orange-500/20',
-      iconColor: 'text-amber-400',
-      borderColor: 'border-amber-500/20',
-    },
-    {
-      label: 'Completed',
-      value: stats.completed,
-      icon: CheckCircle2,
-      color: 'from-emerald-500/20 to-green-500/20',
-      iconColor: 'text-emerald-400',
-      borderColor: 'border-emerald-500/20',
-    },
-    {
-      label: 'On Hold',
-      value: stats.on_hold,
-      icon: Pause,
-      color: 'from-red-500/20 to-rose-500/20',
-      iconColor: 'text-red-400',
-      borderColor: 'border-red-500/20',
-    },
-    {
-      label: 'Pending',
-      value: stats.pending,
-      icon: Clock,
-      color: 'from-blue-500/20 to-indigo-500/20',
-      iconColor: 'text-blue-400',
-      borderColor: 'border-blue-500/20',
-    },
-  ];
-
-  if (loading) {
+  if (userLoading || loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 w-48 skeleton" />
-        <div className="grid grid-cols-4 gap-5">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 skeleton rounded-xl" />
-          ))}
-        </div>
-        <div className="h-96 skeleton rounded-xl" />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-brand" />
       </div>
     );
   }
 
+  const stats = [
+    {
+      title: 'Total Clusters',
+      value: totalClusters,
+      icon: Building2,
+      color: 'text-brand',
+      bg: 'bg-brand/10',
+    },
+    {
+      title: 'Ops Closed',
+      value: opsClosedCount,
+      icon: CheckCircle2,
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-500/10',
+    },
+    {
+      title: 'On Hold',
+      value: onHoldCount,
+      icon: Clock,
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-500/10',
+    },
+    {
+      title: 'Pending',
+      value: pendingCount,
+      icon: AlertCircle,
+      color: 'text-blue-600 dark:text-blue-400',
+      bg: 'bg-blue-500/10',
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Page header */}
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Overview of kitchen closure activity across all clusters
+          Overview of all kitchen closure activities
+          {user && <span className="ml-1">— Welcome back, {user.name.split(' ')[0]}</span>}
         </p>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {statCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={card.label}
-              className={cn(
-                'glass-card p-5 stat-card-glow border',
-                card.borderColor
-              )}
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    {card.label}
-                  </p>
-                  <p className="text-3xl font-bold text-foreground mt-2">
-                    {card.value}
-                  </p>
-                </div>
-                <div
-                  className={cn(
-                    'p-2.5 rounded-lg bg-gradient-to-br',
-                    card.color
-                  )}
-                >
-                  <Icon className={cn('w-5 h-5', card.iconColor)} />
-                </div>
+      {/* Stats cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat) => (
+          <Card key={stat.title} className="border-border/60 hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {stat.title}
+              </CardTitle>
+              <div className={`rounded-lg p-2 ${stat.bg}`}>
+                <stat.icon className={`h-4 w-4 ${stat.color}`} />
               </div>
-            </div>
-          );
-        })}
+            </CardHeader>
+            <CardContent>
+              <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Cluster table */}
-      <div className="glass-card overflow-hidden">
-        {/* Table header */}
-        <div className="p-5 border-b border-border/50 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Building2 className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-base font-semibold text-foreground">
-              Closure Pipeline
-            </h2>
-            <span className="badge bg-secondary text-muted-foreground border-zinc-700">
-              {filteredClusters.length} clusters
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            {/* Search */}
-            <div className="relative flex-1 sm:flex-initial">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+      {/* Table */}
+      <Card className="border-border/60">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <CardTitle className="text-lg">Closure Tracker</CardTitle>
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="dashboard-search"
                 placeholder="Search clusters..."
-                className="form-input pl-9 py-2 text-sm w-full sm:w-[220px]"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
               />
             </div>
-
-            {/* Filter toggle */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(
-                'btn btn-secondary btn-sm',
-                showFilters && 'bg-indigo-500/15 border-indigo-500/30 text-indigo-400'
-              )}
-            >
-              <Filter className="w-3.5 h-3.5" />
-              Filters
-              <ChevronDown
-                className={cn(
-                  'w-3.5 h-3.5 transition-transform',
-                  showFilters && 'rotate-180'
-                )}
-              />
-            </button>
           </div>
-        </div>
-
-        {/* Filter row */}
-        {showFilters && (
-          <div className="px-5 py-3 border-b border-border/50 flex gap-4 bg-card/50">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="form-input py-1.5 text-sm w-auto"
-            >
-              <option value="all">All Statuses</option>
-              <option value="Under Closure">Under Closure</option>
-              <option value="Closed">Closed</option>
-            </select>
-
-            <select
-              value={cityFilter}
-              onChange={(e) => setCityFilter(e.target.value)}
-              className="form-input py-1.5 text-sm w-auto"
-            >
-              <option value="all">All Cities</option>
-              {cities.map((city) => (
-                <option key={city} value={city!}>
-                  {city}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Table */}
-        {filteredClusters.length === 0 ? (
-          <div className="p-12 text-center">
-            <Building2 className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
-            <p className="text-muted-foreground text-sm">
-              No clusters found matching your filters
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Cluster</th>
-                  <th>City</th>
-                  <th>Zone</th>
-                  <th>Status</th>
-                  <th>Progress</th>
-                  <th>Last Ops Date</th>
-                  <th>On Hold</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredClusters.map((cluster) => {
-                  const tracker = cluster.closure_tracker?.[0];
-                  return (
-                    <tr
-                      key={cluster.id}
-                      className="cursor-pointer"
-                      onClick={() => router.push(`/cluster/${cluster.id}`)}
+        </CardHeader>
+        <CardContent>
+          {filtered.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">
+                {search ? 'No clusters match your search' : 'No closure data yet'}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    {[
+                      { key: 'cluster_marker' as SortKey, label: 'Cluster' },
+                      { key: 'kitchen_name' as SortKey, label: 'Kitchen' },
+                      { key: 'city' as SortKey, label: 'City' },
+                    ].map((col) => (
+                      <TableHead key={col.key}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="-ml-3 h-8 text-xs font-semibold"
+                          onClick={() => handleSort(col.key)}
+                        >
+                          {col.label}
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-xs font-semibold">Entity</TableHead>
+                    <TableHead className="text-xs font-semibold">Ops Closed</TableHead>
+                    <TableHead className="text-xs font-semibold">Last Ops Date</TableHead>
+                    <TableHead className="text-xs font-semibold">Status</TableHead>
+                    <TableHead className="text-xs font-semibold">Rent</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((tracker) => (
+                    <TableRow
+                      key={tracker.id}
+                      className="cursor-pointer hover:bg-accent/50 transition-colors"
+                      onClick={() => router.push(`/cluster/${encodeURIComponent(tracker.cluster_marker)}`)}
                     >
-                      <td>
-                        <div>
-                          <p className="font-medium text-foreground">
-                            {cluster.cluster_marker}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {cluster.ops_name || cluster.finance_name || '—'}
-                          </p>
-                        </div>
-                      </td>
-                      <td>{cluster.city || '—'}</td>
-                      <td>{cluster.zone || '—'}</td>
-                      <td>
-                        <span
-                          className={cn(
-                            'badge',
-                            getStatusColor(cluster.status)
-                          )}
-                        >
-                          {cluster.status}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={cn(
-                            'badge',
-                            getProgressColor(tracker?.progress || null)
-                          )}
-                        >
-                          {tracker?.progress || 'Not Started'}
-                        </span>
-                      </td>
-                      <td>
-                        {formatDate(tracker?.last_ops_date)}
-                      </td>
-                      <td>
-                        {tracker?.on_hold ? (
-                          <span className="badge bg-red-500/15 text-red-400 border-red-500/30">
-                            On Hold
-                          </span>
+                      <TableCell className="font-semibold text-brand dark:text-brand-200">
+                        {tracker.cluster_marker}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        {tracker.kitchen_name || '—'}
+                      </TableCell>
+                      <TableCell>{tracker.city || '—'}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
+                        {tracker.entity || '—'}
+                      </TableCell>
+                      <TableCell>
+                        {tracker.ops_closed === 'Yes' ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">Yes</span>
                         ) : (
-                          <span className="text-zinc-600">—</span>
+                          <span className="text-muted-foreground">No</span>
                         )}
-                      </td>
-                      <td>
-                        <ArrowUpRight className="w-4 h-4 text-zinc-600" />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                      </TableCell>
+                      <TableCell className="text-sm">{formatDate(tracker.last_ops_date)}</TableCell>
+                      <TableCell>{getStatusBadge(tracker)}</TableCell>
+                      <TableCell className="text-sm tabular-nums">
+                        {formatCurrency(tracker.rent)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

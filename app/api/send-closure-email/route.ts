@@ -1,91 +1,78 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { NextResponse } from 'next/server';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-interface EmailRow {
+interface BrandRow {
   cluster_marker: string;
   brand: string;
   kitchen_name: string;
-  city: string;
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { to, cc, rows, senderName, senderEmail } = (await request.json()) as {
-      to: string[];
-      cc: string[];
-      rows: EmailRow[];
+    const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy');
+    const body = await request.json();
+    const { toEmails, ccEmails, senderName, brands } = body as {
+      toEmails: string[];
+      ccEmails: string[];
       senderName: string;
-      senderEmail: string;
+      brands: BrandRow[];
     };
 
-    if (!to || to.length === 0 || !rows || rows.length === 0) {
-      return NextResponse.json(
-        { error: 'Missing required fields: to, rows' },
-        { status: 400 }
-      );
+    if (!toEmails || toEmails.length === 0) {
+      return NextResponse.json({ error: 'No recipients specified' }, { status: 400 });
     }
 
-    // Build the HTML email table
-    const tableRows = rows
-      .map(
-        (row) => `
-        <tr>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #374151;">${row.cluster_marker}</td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #374151;">${row.brand}</td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #374151;">${row.kitchen_name}</td>
-          <td style="padding: 10px 14px; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #374151;">${row.city}</td>
-        </tr>`
-      )
-      .join('');
-
-    const today = new Date().toLocaleDateString('en-GB', {
+    const today = new Date().toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // Build HTML table rows
+    const tableRows = brands
+      .map(
+        (b) => `
+      <tr>
+        <td style="padding: 8px 12px; border: 1px solid #E2E8F7;">${b.cluster_marker}</td>
+        <td style="padding: 8px 12px; border: 1px solid #E2E8F7;">${b.brand}</td>
+        <td style="padding: 8px 12px; border: 1px solid #E2E8F7;">${b.kitchen_name || '—'}</td>
+      </tr>
+    `
+      )
+      .join('');
 
-    const html = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px;">
-        <p style="font-size: 14px; color: #374151; line-height: 1.6;">Hi Team,</p>
-        <p style="font-size: 14px; color: #374151; line-height: 1.6;">Please find below the list of kitchens identified for closure:</p>
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://kcm.curefoods.com';
+
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; color: #0D1F6E; max-width: 600px;">
+        <p>Hi Team,</p>
+        <p>Please find below the list of kitchens identified for closure:</p>
         
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+        <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
           <thead>
-            <tr style="background: #f9fafb;">
-              <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb;">Cluster Marker</th>
-              <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb;">Brand</th>
-              <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb;">Kitchen Name</th>
-              <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb;">City</th>
+            <tr style="background-color: #F4F6FB;">
+              <th style="padding: 8px 12px; border: 1px solid #E2E8F7; text-align: left; font-weight: 600;">Cluster Marker</th>
+              <th style="padding: 8px 12px; border: 1px solid #E2E8F7; text-align: left; font-weight: 600;">Brand</th>
+              <th style="padding: 8px 12px; border: 1px solid #E2E8F7; text-align: left; font-weight: 600;">Kitchen Name</th>
             </tr>
           </thead>
           <tbody>
             ${tableRows}
           </tbody>
         </table>
-
-        <p style="font-size: 14px; color: #374151; line-height: 1.6;">
-          Kindly review and update the status on the dashboard at 
-          <a href="${appUrl}/dashboard" style="color: #4f46e5; text-decoration: underline;">${appUrl}</a>.
-        </p>
-
-        <p style="font-size: 14px; color: #374151; line-height: 1.6; margin-top: 24px;">
-          Regards,<br/>
-          ${senderName}<br/>
-          <span style="color: #6b7280;">${senderEmail}</span>
-        </p>
+        
+        <p>Please review and update the status on the dashboard: <a href="${appUrl}" style="color: #0D1F6E;">${appUrl}</a></p>
+        
+        <p>Regards,<br/>${senderName}</p>
       </div>
     `;
 
-    const { data, error } = await resend.emails.send({
-      from: `KCM Dashboard <onboarding@resend.dev>`,
-      to,
-      cc: cc && cc.length > 0 ? cc : undefined,
+    const { error } = await resend.emails.send({
+      from: 'KCM Dashboard <noreply@curefoods.com>',
+      to: toEmails,
+      cc: ccEmails.length > 0 ? ccEmails : undefined,
       subject: `Kitchen Closure Request — ${today}`,
-      html,
+      html: htmlContent,
     });
 
     if (error) {
@@ -93,12 +80,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, id: data?.id });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Email API error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Email sending error:', error);
+    return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
   }
 }
