@@ -1,0 +1,625 @@
+@import "tailwindcss";
+
+/* ============================================
+   KCM Dashboard — Design System
+   Premium dark theme with glassmorphism
+   ============================================ */
+
+@theme inline {
+  /* Font families */
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), "Fira Code", monospace;
+
+  /* Use our CSS variables for tailwind colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-hover: var(--sidebar-hover);
+}
+
+@layer base {
+  :root {
+    --background: #fafafa;
+    --foreground: #09090b;
+    --card: #ffffff;
+    --card-foreground: #09090b;
+    --border: #e4e4e7;
+    --input: #e4e4e7;
+    --ring: #6366f1;
+    --primary: #6366f1;
+    --primary-foreground: #ffffff;
+    --secondary: #f4f4f5;
+    --secondary-hover: #e4e4e7;
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a;
+    --sidebar: #ffffff;
+    --sidebar-foreground: #52525b;
+    --sidebar-active: #6366f1;
+    --sidebar-hover: #f4f4f5;
+    
+    /* Variables for hardcoded raw CSS */
+    --glass-bg: rgba(255, 255, 255, 0.6);
+    --glass-hover-bg: rgba(244, 244, 245, 0.8);
+    --glass-border: rgba(228, 228, 231, 0.5);
+    --table-header-bg: rgba(255, 255, 255, 0.9);
+    --table-row-hover: rgba(244, 244, 245, 0.6);
+    --table-border: rgba(228, 228, 231, 0.8);
+    --table-text: #3f3f46;
+    --table-header-text: #71717a;
+    --skeleton-bg: #e4e4e7;
+    --input-bg: #ffffff;
+    --modal-bg: #ffffff;
+    --modal-border: #e4e4e7;
+  }
+  
+  .dark {
+    --background: #09090b;
+    --foreground: #fafafa;
+    --card: #18181b;
+    --card-foreground: #fafafa;
+    --border: #27272a;
+    --input: #27272a;
+    --ring: #6366f1;
+    --primary: #6366f1;
+    --primary-foreground: #ffffff;
+    --secondary: #27272a;
+    --secondary-hover: #3f3f46;
+    --muted: #27272a;
+    --muted-foreground: #a1a1aa;
+    --sidebar: #0f0f12;
+    --sidebar-foreground: #a1a1aa;
+    --sidebar-active: #6366f1;
+    --sidebar-hover: #18181b;
+    
+    /* Variables for hardcoded raw CSS */
+    --glass-bg: rgba(24, 24, 27, 0.6);
+    --glass-hover-bg: rgba(31, 31, 35, 0.8);
+    --glass-border: rgba(39, 39, 42, 0.5);
+    --table-header-bg: rgba(24, 24, 27, 0.8);
+    --table-row-hover: rgba(39, 39, 42, 0.3);
+    --table-border: rgba(39, 39, 42, 0.5);
+    --table-text: #d4d4d8;
+    --table-header-text: #71717a;
+    --skeleton-bg: #1a1a1e;
+    --input-bg: #18181b;
+    --modal-bg: #18181b;
+    --modal-border: #27272a;
+  }
+}
+
+/* ============================================
+   Base styles
+   ============================================ */
+
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* ============================================
+   Glass card effect
+   ============================================ */
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+}
+
+.glass-card-hover {
+  transition: all 0.2s ease;
+}
+
+.glass-card-hover:hover {
+  background: var(--glass-hover-bg);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 24px rgba(99, 102, 241, 0.08);
+}
+
+/* ============================================
+   Gradient text
+   ============================================ */
+
+.gradient-text {
+  background: linear-gradient(135deg, #6366f1 0%, #a78bfa 50%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   Gradient border effect
+   ============================================ */
+
+.gradient-border {
+  position: relative;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, #6366f1, #a78bfa, #818cf8);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.gradient-border:hover::before {
+  opacity: 1;
+}
+
+/* ============================================
+   Subtle background glow
+   ============================================ */
+
+.glow-bg {
+  position: relative;
+}
+
+.glow-bg::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(99, 102, 241, 0.06) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================
+   Stat card glow animation
+   ============================================ */
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.12);
+  }
+}
+
+.stat-card-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+/* ============================================
+   Loading skeleton animation
+   ============================================ */
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--skeleton-bg);
+  border-radius: 6px;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+/* ============================================
+   Table styles
+   ============================================ */
+
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.data-table thead th {
+  background: var(--table-header-bg);
+  backdrop-filter: blur(8px);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--table-header-text);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.data-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+  background: var(--table-row-hover);
+}
+
+.data-table tbody td {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--table-text);
+  border-bottom: 1px solid var(--table-border);
+}
+
+/* ============================================
+   Form input styles
+   ============================================ */
+
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--foreground);
+  font-size: 14px;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.form-input::placeholder {
+  color: #52525b;
+}
+
+.form-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  margin-bottom: 6px;
+}
+
+/* ============================================
+   Button styles
+   ============================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  outline: none;
+  border: none;
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.25);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #818cf8, #a78bfa);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--secondary);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--secondary-hover);
+  color: var(--foreground);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted-foreground);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--table-row-hover);
+  color: var(--foreground);
+}
+
+.btn-destructive {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.btn-destructive:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.btn-lg {
+  padding: 12px 28px;
+  font-size: 16px;
+}
+
+/* ============================================
+   Badge styles
+   ============================================ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 9999px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+/* ============================================
+   Modal / Dialog overlay
+   ============================================ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
+  border-radius: 16px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  max-width: 640px;
+  width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ============================================
+   Toast notification
+   ============================================ */
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: slideInRight 0.3s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.toast-success {
+  background: #065f46;
+  color: #a7f3d0;
+  border: 1px solid #047857;
+}
+
+.toast-error {
+  background: #7f1d1d;
+  color: #fecaca;
+  border: 1px solid #991b1b;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ============================================
+   Tabs
+   ============================================ */
+
+.tab-list {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--modal-bg);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.tab-trigger {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--table-header-text);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  background: none;
+}
+
+.tab-trigger:hover {
+  color: var(--foreground);
+  background: var(--table-row-hover);
+}
+
+.tab-trigger[data-state="active"],
+.tab-trigger.active {
+  background: #6366f1;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+/* ============================================
+   React Select custom theme (dark mode)
+   ============================================ */
+
+.react-select-container .react-select__control {
+  background: var(--input-bg) !important;
+  border-color: var(--border) !important;
+  border-radius: 8px !important;
+  min-height: 42px !important;
+  box-shadow: none !important;
+}
+
+.react-select-container .react-select__control:hover {
+  border-color: var(--muted-foreground) !important;
+}
+
+.react-select-container .react-select__control--is-focused {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+.react-select-container .react-select__menu {
+  background: var(--modal-bg) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4) !important;
+}
+
+.react-select-container .react-select__option {
+  color: var(--foreground) !important;
+}
+
+.react-select-container .react-select__option--is-focused {
+  background: var(--secondary) !important;
+}
+
+.react-select-container .react-select__option--is-selected {
+  background: #6366f1 !important;
+  color: #ffffff !important;
+}
+
+.react-select-container .react-select__multi-value {
+  background: var(--secondary) !important;
+  border-radius: 6px !important;
+}
+
+.react-select-container .react-select__multi-value__label {
+  color: var(--foreground) !important;
+}
+
+.react-select-container .react-select__multi-value__remove:hover {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+.react-select-container .react-select__input-container,
+.react-select-container .react-select__single-value,
+.react-select-container .react-select__placeholder {
+  color: var(--muted-foreground) !important;
+}
+
+.react-select-container .react-select__input {
+  color: var(--foreground) !important;
+}
+
+.react-select-container .react-select__indicator-separator {
+  background: var(--border) !important;
+}
+
+.react-select-container .react-select__indicator {
+  color: var(--muted-foreground) !important;
+}
