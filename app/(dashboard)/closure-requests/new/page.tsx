@@ -68,6 +68,7 @@ export default function NewClosureRequestPage() {
   const [kitchens, setKitchens] = useState<KitchenMaster[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
 
   // Selected clusters
   const [selectedClusters, setSelectedClusters] = useState<string[]>([]);
@@ -124,6 +125,7 @@ export default function NewClosureRequestPage() {
   const handleSend = async () => {
     if (!canSend || !user) return;
     setSending(true);
+    setSendError('');
 
     try {
       // Create closure request record
@@ -131,25 +133,26 @@ export default function NewClosureRequestPage() {
         .from('closure_requests')
         .insert({
           requested_by: user.id,
-          status: 'Sent',
+          status: 'Draft',
           to_emails: toEmails.map((e) => e.value),
           cc_emails: ccEmails.map((e) => e.value),
-          email_sent_at: new Date().toISOString(),
         })
         .select()
         .single();
 
-      if (reqError || !request) throw reqError;
+      if (reqError || !request) throw reqError ?? new Error('Failed to create closure request');
 
       // Insert cluster linkages
       const clusterInserts = selectedClusters.map((marker) => ({
         request_id: request.id,
         cluster_marker: marker,
       }));
-      await supabase.from('closure_request_clusters').insert(clusterInserts);
+      const { error: clusterError } = await supabase.from('closure_request_clusters').insert(clusterInserts);
+
+      if (clusterError) throw clusterError;
 
       // Send email via API route
-      await fetch('/api/send-closure-email', {
+      const response = await fetch('/api/send-closure-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -164,9 +167,25 @@ export default function NewClosureRequestPage() {
         }),
       });
 
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to send email');
+      }
+
+      const { error: updateError } = await supabase
+        .from('closure_requests')
+        .update({
+          status: 'Sent',
+          email_sent_at: new Date().toISOString(),
+        })
+        .eq('id', request.id);
+
+      if (updateError) throw updateError;
+
       router.push('/closure-requests');
     } catch (error) {
       console.error('Error sending closure request:', error);
+      setSendError(error instanceof Error ? error.message : 'Failed to send closure email');
     } finally {
       setSending(false);
     }
@@ -404,6 +423,12 @@ export default function NewClosureRequestPage() {
               </p>
             </div>
           </div>
+
+          {sendError && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
+              {sendError}
+            </div>
+          )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPreview(false)}>

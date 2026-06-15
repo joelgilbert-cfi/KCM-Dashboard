@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   ChefHat,
   FileText,
+  ClipboardList,
   Package,
   ScrollText,
   Settings,
@@ -20,6 +21,7 @@ import { useState } from 'react';
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Kitchen Master', href: '/kitchens', icon: ChefHat },
+  { label: 'Kitchen Closure Status', href: '/kitchen-closure-status', icon: ClipboardList },
   { label: 'Closure Requests', href: '/closure-requests', icon: FileText },
   { label: 'Assets', href: '/assets', icon: Package },
   { label: 'Audit Log', href: '/audit-log', icon: ScrollText },

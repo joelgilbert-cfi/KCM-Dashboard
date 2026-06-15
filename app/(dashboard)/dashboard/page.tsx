@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import { useUser } from '@/hooks/use-user';
-import type { ClosureTracker } from '@/lib/types';
+import type { KitchenStatusTracker } from '@/lib/types';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,7 @@ type SortDir = 'asc' | 'desc';
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: userLoading } = useUser();
-  const [trackers, setTrackers] = useState<ClosureTracker[]>([]);
+  const [trackers, setTrackers] = useState<KitchenStatusTracker[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('updated_at');
@@ -44,12 +44,12 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchTrackers() {
       const { data, error } = await supabase
-        .from('closure_tracker')
+        .from('kitchen_status')
         .select('*')
         .order('updated_at', { ascending: false });
 
       if (!error && data) {
-        setTrackers(data as ClosureTracker[]);
+        setTrackers(data as KitchenStatusTracker[]);
       }
       setLoading(false);
     }
@@ -93,7 +93,7 @@ export default function DashboardPage() {
     }
   };
 
-  const getStatusBadge = (tracker: ClosureTracker) => {
+  const getStatusBadge = (tracker: KitchenStatusTracker) => {
     if (tracker.ops_closed === 'Yes') {
       return <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Closed</Badge>;
     }
@@ -241,7 +241,7 @@ export default function DashboardPage() {
                       </TableCell>
                       <TableCell>{tracker.city || '—'}</TableCell>
                       <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
-                        {tracker.entity || '—'}
+                      {tracker.entity || '—'}
                       </TableCell>
                       <TableCell>
                         {tracker.ops_closed === 'Yes' ? (

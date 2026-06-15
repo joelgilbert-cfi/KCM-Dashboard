@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase';
 import type { AuditLog } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -32,7 +32,7 @@ import { Loader2, ScrollText, Search, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const TRACKED_TABLES = [
-  'closure_tracker',
+  'kitchen_status',
   'fixed_asset_register',
   'asset_movements',
   'asset_sales',

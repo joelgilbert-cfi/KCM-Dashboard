@@ -16,7 +16,7 @@ This project is a Next.js (App Router) and Supabase-based internal web dashboard
 - React 19.2.4
 - Supabase (PostgreSQL, Auth, RLS)
 - Tailwind CSS 4 & shadcn/ui
-- Resend (Email Delivery)
+- Nodemailer + Gmail SMTP (Email Delivery)
 
 ### Notes
 - The `kitchen_master` table utilizes soft deletes and is intentionally excluded from the audit log.

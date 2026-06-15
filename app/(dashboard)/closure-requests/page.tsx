@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase';
 import { useUser } from '@/hooks/use-user';
 import type { ClosureRequest } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -19,7 +19,6 @@ import {
 import {
   Loader2,
   Plus,
-  FileText,
   ChevronDown,
   ChevronUp,
   Mail,
@@ -103,9 +102,8 @@ export default function ClosureRequestsPage() {
                 </TableHeader>
                 <TableBody>
                   {requests.map((req) => (
-                    <>
+                    <Fragment key={req.id}>
                       <TableRow
-                        key={req.id}
                         className="cursor-pointer hover:bg-accent/50"
                         onClick={() => setExpandedId(expandedId === req.id ? null : req.id)}
                       >
@@ -172,7 +170,7 @@ export default function ClosureRequestsPage() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </Fragment>
                   ))}
                 </TableBody>
               </Table>

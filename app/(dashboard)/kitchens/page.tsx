@@ -4,10 +4,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase';
 import { useUser } from '@/hooks/use-user';
 import type { KitchenMaster } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatDateForEmail } from '@/lib/utils';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -40,9 +42,30 @@ import {
   X,
   Loader2,
   ChefHat,
+  ArrowUpDown,
+  Mail,
+  Send,
+  Eye,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 
 const FORMATS = ['Cloud', 'Cloud Kitchen', 'Restaurant', 'Kiosk', 'B2B', 'Franchise'];
+const CreatableSelect = dynamic(() => import('react-select/creatable'), { ssr: false });
+
+type SortOption =
+  | 'cluster-asc'
+  | 'cluster-desc'
+  | 'recently-added'
+  | 'first-added'
+  | 'brand-asc'
+  | 'brand-desc'
+  | 'kitchen-asc'
+  | 'kitchen-desc';
+
+interface EmailOption {
+  label: string;
+  value: string;
+}
 
 export default function KitchensPage() {
   const { user } = useUser();
@@ -52,6 +75,8 @@ export default function KitchensPage() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterFormat, setFilterFormat] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('cluster-asc');
+  const [contactOptions, setContactOptions] = useState<EmailOption[]>([]);
 
   // Editing state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -71,7 +96,17 @@ export default function KitchensPage() {
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<KitchenMaster | null>(null);
 
+  // Closure email workflow
+  const [selectedKitchenIds, setSelectedKitchenIds] = useState<string[]>([]);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [toEmails, setToEmails] = useState<EmailOption[]>([]);
+  const [ccEmails, setCcEmails] = useState<EmailOption[]>([]);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailError, setEmailError] = useState('');
+
   const isExpansion = user?.role === 'expansion' || user?.role === 'admin';
+  const isFinance = user?.role === 'finance' || user?.role === 'admin';
 
   const fetchKitchens = useCallback(async () => {
     const { data, error } = await supabase
@@ -87,20 +122,205 @@ export default function KitchensPage() {
   }, [supabase]);
 
   useEffect(() => {
+    // Existing client-side fetch pattern; this refreshes the table after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchKitchens();
   }, [fetchKitchens]);
 
-  // Filter
-  const filtered = kitchens.filter((k) => {
-    const q = search.toLowerCase();
-    const matchesSearch =
-      k.cluster_marker?.toLowerCase().includes(q) ||
-      k.brand?.toLowerCase().includes(q) ||
-      k.kitchen_name?.toLowerCase().includes(q);
-    const matchesStatus = filterStatus === 'all' || k.status === filterStatus;
-    const matchesFormat = filterFormat === 'all' || k.format === filterFormat;
-    return matchesSearch && matchesStatus && matchesFormat;
-  });
+  useEffect(() => {
+    async function fetchContacts() {
+      const { data } = await supabase
+        .from('users')
+        .select('name, email')
+        .order('name', { ascending: true });
+
+      if (data) {
+        setContactOptions(
+          data
+            .filter((u) => u.email)
+            .map((u) => ({
+              label: u.name ? `${u.name} <${u.email}>` : u.email,
+              value: u.email,
+            }))
+        );
+      }
+    }
+
+    fetchContacts();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const compareText = (a: string | null | undefined, b: string | null | undefined) =>
+    (a ?? '').localeCompare(b ?? '', undefined, { numeric: true, sensitivity: 'base' });
+
+  const compareDate = (a: string | null | undefined, b: string | null | undefined) =>
+    new Date(a ?? 0).getTime() - new Date(b ?? 0).getTime();
+
+  // Filter and sort
+  const filtered = kitchens
+    .filter((k) => {
+      const q = search.toLowerCase();
+      const matchesSearch =
+        k.cluster_marker?.toLowerCase().includes(q) ||
+        k.brand?.toLowerCase().includes(q) ||
+        k.kitchen_name?.toLowerCase().includes(q);
+      const matchesStatus = filterStatus === 'all' || k.status === filterStatus;
+      const matchesFormat = filterFormat === 'all' || k.format === filterFormat;
+      return matchesSearch && matchesStatus && matchesFormat;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'cluster-desc':
+          return compareText(b.cluster_marker, a.cluster_marker) || compareText(a.brand, b.brand);
+        case 'recently-added':
+          return compareDate(b.added_at, a.added_at);
+        case 'first-added':
+          return compareDate(a.added_at, b.added_at);
+        case 'brand-asc':
+          return compareText(a.brand, b.brand) || compareText(a.cluster_marker, b.cluster_marker);
+        case 'brand-desc':
+          return compareText(b.brand, a.brand) || compareText(a.cluster_marker, b.cluster_marker);
+        case 'kitchen-asc':
+          return compareText(a.kitchen_name, b.kitchen_name) || compareText(a.cluster_marker, b.cluster_marker);
+        case 'kitchen-desc':
+          return compareText(b.kitchen_name, a.kitchen_name) || compareText(a.cluster_marker, b.cluster_marker);
+        case 'cluster-asc':
+        default:
+          return compareText(a.cluster_marker, b.cluster_marker) || compareText(a.brand, b.brand);
+      }
+    });
+
+  const selectedKitchens = kitchens.filter((k) => selectedKitchenIds.includes(k.id));
+  const visibleKitchenIds = filtered.map((k) => k.id);
+  const allVisibleSelected =
+    visibleKitchenIds.length > 0 && visibleKitchenIds.every((id) => selectedKitchenIds.includes(id));
+  const canPreviewEmail = selectedKitchenIds.length > 0 && toEmails.length > 0;
+
+  const selectStyles = {
+    control: (base: Record<string, unknown>) => ({
+      ...base,
+      backgroundColor: 'var(--color-card)',
+      borderColor: 'var(--color-border)',
+      borderRadius: 'var(--radius-md)',
+      minHeight: '2.5rem',
+      fontSize: '0.875rem',
+    }),
+    menu: (base: Record<string, unknown>) => ({
+      ...base,
+      backgroundColor: 'var(--color-card)',
+      border: '1px solid var(--color-border)',
+      borderRadius: 'var(--radius-md)',
+      zIndex: 60,
+    }),
+    option: (base: Record<string, unknown>, state: { isFocused: boolean }) => ({
+      ...base,
+      backgroundColor: state.isFocused ? 'var(--color-accent)' : 'transparent',
+      color: 'var(--color-foreground)',
+      fontSize: '0.875rem',
+    }),
+    multiValue: (base: Record<string, unknown>) => ({
+      ...base,
+      backgroundColor: 'var(--color-secondary)',
+      borderRadius: 'var(--radius-sm)',
+    }),
+    input: (base: Record<string, unknown>) => ({
+      ...base,
+      color: 'var(--color-foreground)',
+    }),
+  };
+
+  const toggleKitchenSelection = (kitchenId: string) => {
+    setSelectedKitchenIds((prev) =>
+      prev.includes(kitchenId) ? prev.filter((id) => id !== kitchenId) : [...prev, kitchenId]
+    );
+  };
+
+  const toggleVisibleSelection = () => {
+    setSelectedKitchenIds((prev) => {
+      if (allVisibleSelected) {
+        return prev.filter((id) => !visibleKitchenIds.includes(id));
+      }
+
+      return Array.from(new Set([...prev, ...visibleKitchenIds]));
+    });
+  };
+
+  const openEmailDialog = () => {
+    setEmailError('');
+    setShowPreview(false);
+    setShowEmailDialog(true);
+  };
+
+  const handleSendClosureEmail = async () => {
+    if (!user || !canPreviewEmail) return;
+
+    setSendingEmail(true);
+    setEmailError('');
+
+    try {
+      const { data: request, error: requestError } = await supabase
+        .from('closure_requests')
+        .insert({
+          requested_by: user.id,
+          status: 'Draft',
+          to_emails: toEmails.map((email) => email.value),
+          cc_emails: ccEmails.map((email) => email.value),
+        })
+        .select()
+        .single();
+
+      if (requestError || !request) throw requestError ?? new Error('Failed to create closure request');
+
+      const clusterMarkers = Array.from(new Set(selectedKitchens.map((k) => k.cluster_marker)));
+      const { error: clusterError } = await supabase.from('closure_request_clusters').insert(
+        clusterMarkers.map((clusterMarker) => ({
+          request_id: request.id,
+          cluster_marker: clusterMarker,
+        }))
+      );
+
+      if (clusterError) throw clusterError;
+
+      const response = await fetch('/api/send-closure-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toEmails: toEmails.map((email) => email.value),
+          ccEmails: ccEmails.map((email) => email.value),
+          senderName: user.name,
+          brands: selectedKitchens.map((kitchen) => ({
+            cluster_marker: kitchen.cluster_marker,
+            brand: kitchen.brand,
+            kitchen_name: kitchen.kitchen_name || '',
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to send email');
+      }
+
+      const { error: updateError } = await supabase
+        .from('closure_requests')
+        .update({
+          status: 'Sent',
+          email_sent_at: new Date().toISOString(),
+        })
+        .eq('id', request.id);
+
+      if (updateError) throw updateError;
+
+      setShowEmailDialog(false);
+      setShowPreview(false);
+      setSelectedKitchenIds([]);
+      setToEmails([]);
+      setCcEmails([]);
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : 'Failed to send closure email');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
   // Start editing
   const startEdit = (kitchen: KitchenMaster) => {
@@ -203,17 +423,30 @@ export default function KitchensPage() {
             Master list of all kitchens — {kitchens.length} total
           </p>
         </div>
-        {isExpansion && (
-          <Button onClick={() => setShowAdd(true)} className="bg-brand hover:bg-brand-dark">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Kitchen
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {isFinance && (
+            <Button
+              onClick={openEmailDialog}
+              disabled={selectedKitchenIds.length === 0}
+              variant="outline"
+              className="border-brand/30 text-brand hover:bg-brand/5"
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Email Selected ({selectedKitchenIds.length})
+            </Button>
+          )}
+          {isExpansion && (
+            <Button onClick={() => setShowAdd(true)} className="bg-brand hover:bg-brand-dark">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Kitchen
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card className="border-border/60">
         <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col lg:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -224,8 +457,24 @@ export default function KitchensPage() {
                 className="pl-9"
               />
             </div>
+            <Select value={sortBy} onValueChange={(v) => setSortBy((v ?? 'cluster-asc') as SortOption)}>
+              <SelectTrigger className="w-full lg:w-52">
+                <ArrowUpDown className="mr-2 h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cluster-asc">Cluster: Ascending</SelectItem>
+                <SelectItem value="cluster-desc">Cluster: Descending</SelectItem>
+                <SelectItem value="recently-added">Recently Added</SelectItem>
+                <SelectItem value="first-added">First Added</SelectItem>
+                <SelectItem value="brand-asc">Brand: A to Z</SelectItem>
+                <SelectItem value="brand-desc">Brand: Z to A</SelectItem>
+                <SelectItem value="kitchen-asc">Kitchen: A to Z</SelectItem>
+                <SelectItem value="kitchen-desc">Kitchen: Z to A</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v ?? 'all')}>
-              <SelectTrigger className="w-full sm:w-40">
+              <SelectTrigger className="w-full lg:w-40">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -236,7 +485,7 @@ export default function KitchensPage() {
               </SelectContent>
             </Select>
             <Select value={filterFormat} onValueChange={(v) => setFilterFormat(v ?? 'all')}>
-              <SelectTrigger className="w-full sm:w-40">
+              <SelectTrigger className="w-full lg:w-40">
                 <SelectValue placeholder="Format" />
               </SelectTrigger>
               <SelectContent>
@@ -263,6 +512,17 @@ export default function KitchensPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
+                    {isFinance && (
+                      <TableHead className="w-10">
+                        <input
+                          type="checkbox"
+                          checked={allVisibleSelected}
+                          onChange={toggleVisibleSelection}
+                          aria-label="Select all visible kitchens"
+                          className="h-4 w-4 rounded border-input accent-brand"
+                        />
+                      </TableHead>
+                    )}
                     {isExpansion && <TableHead className="w-10" />}
                     <TableHead className="text-xs font-semibold">Cluster Marker</TableHead>
                     <TableHead className="text-xs font-semibold">Brand</TableHead>
@@ -275,6 +535,17 @@ export default function KitchensPage() {
                 <TableBody>
                   {filtered.map((kitchen) => (
                     <TableRow key={kitchen.id} className="group">
+                      {isFinance && (
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            checked={selectedKitchenIds.includes(kitchen.id)}
+                            onChange={() => toggleKitchenSelection(kitchen.id)}
+                            aria-label={`Select ${kitchen.brand} in cluster ${kitchen.cluster_marker}`}
+                            className="h-4 w-4 rounded border-input accent-brand"
+                          />
+                        </TableCell>
+                      )}
                       {isExpansion && (
                         <TableCell>
                           {editingId === kitchen.id ? (
@@ -467,6 +738,157 @@ export default function KitchensPage() {
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Add Kitchen
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Closure Email Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Closure Email
+            </DialogTitle>
+            <DialogDescription>
+              {selectedKitchens.length} selected kitchen(s) will be included in this email.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!showPreview ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>To *</Label>
+                  <CreatableSelect
+                    isMulti
+                    options={contactOptions}
+                    value={toEmails}
+                    onChange={(value) => setToEmails(value as EmailOption[])}
+                    placeholder="Type a name or email..."
+                    styles={selectStyles}
+                    formatCreateLabel={(input: string) => `Add "${input}"`}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>CC</Label>
+                  <CreatableSelect
+                    isMulti
+                    options={contactOptions}
+                    value={ccEmails}
+                    onChange={(value) => setCcEmails(value as EmailOption[])}
+                    placeholder="Type a name or email..."
+                    styles={selectStyles}
+                    formatCreateLabel={(input: string) => `Add "${input}"`}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-lg border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs font-semibold">Cluster Marker</TableHead>
+                      <TableHead className="text-xs font-semibold">Brand</TableHead>
+                      <TableHead className="text-xs font-semibold">Kitchen Name</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedKitchens.map((kitchen) => (
+                      <TableRow key={kitchen.id}>
+                        <TableCell className="font-medium">{kitchen.cluster_marker}</TableCell>
+                        <TableCell>{kitchen.brand}</TableCell>
+                        <TableCell>{kitchen.kitchen_name || '—'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 text-sm">
+              <div className="rounded-lg border p-4 bg-muted/30 space-y-2">
+                <div>
+                  <strong>Subject:</strong> Kitchen Closure Request — {formatDateForEmail()}
+                </div>
+                <div>
+                  <strong>To:</strong> {toEmails.map((email) => email.value).join(', ')}
+                </div>
+                {ccEmails.length > 0 && (
+                  <div>
+                    <strong>CC:</strong> {ccEmails.map((email) => email.value).join(', ')}
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <p className="mb-4">Hi Team,</p>
+                <p className="mb-4">Please find below the list of kitchens identified for closure:</p>
+
+                <div className="rounded border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs font-semibold">Cluster Marker</TableHead>
+                        <TableHead className="text-xs font-semibold">Brand</TableHead>
+                        <TableHead className="text-xs font-semibold">Kitchen Name</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedKitchens.map((kitchen) => (
+                        <TableRow key={kitchen.id}>
+                          <TableCell className="font-medium">{kitchen.cluster_marker}</TableCell>
+                          <TableCell>{kitchen.brand}</TableCell>
+                          <TableCell>{kitchen.kitchen_name || '—'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <p className="mt-4">
+                  Please review and update the status on the dashboard:{' '}
+                  <span className="text-brand underline">
+                    {process.env.NEXT_PUBLIC_APP_URL || 'https://kcm.curefoods.com'}
+                  </span>
+                </p>
+                <p className="mt-4">
+                  Regards,
+                  <br />
+                  {user?.name || 'Finance Team'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {emailError && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
+              {emailError}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => (showPreview ? setShowPreview(false) : setShowEmailDialog(false))}
+            >
+              {showPreview ? 'Back' : 'Cancel'}
+            </Button>
+            {!showPreview ? (
+              <Button onClick={() => setShowPreview(true)} disabled={!canPreviewEmail} className="bg-brand hover:bg-brand-dark">
+                <Eye className="mr-2 h-4 w-4" />
+                Preview Email
+              </Button>
+            ) : (
+              <Button onClick={handleSendClosureEmail} disabled={sendingEmail} className="bg-brand hover:bg-brand-dark">
+                {sendingEmail ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
+                Confirm & Send
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

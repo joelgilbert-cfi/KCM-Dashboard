@@ -19,7 +19,7 @@
 - **Class Merging**: `clsx`, `tailwind-merge`
 
 ## Utilities & External Services
-- **Emails**: Resend API (`resend`) for sending closure notification emails.
+- **Emails**: Nodemailer with Gmail SMTP for sending closure notification emails.
 - **Form/Input**: `react-select` (Creatable variant used for email tag inputs).
 
 ## Key Files

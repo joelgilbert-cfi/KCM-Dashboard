@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, use, type Dispatch, type SetStateAction } from 'react';
 import { createClient } from '@/lib/supabase';
 import { useUser } from '@/hooks/use-user';
-import type { ClosureTracker, KitchenMaster, AssetMovement, AssetSale, AuditLog } from '@/lib/types';
+import type { KitchenStatusTracker, KitchenMaster, AssetMovement, AssetSale, AuditLog } from '@/lib/types';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,44 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+function TrackerField({
+  label,
+  field,
+  type = 'text',
+  isExpansion,
+  tracker,
+  editData,
+  setEditData,
+}: {
+  label: string;
+  field: keyof KitchenStatusTracker;
+  type?: string;
+  isExpansion: boolean;
+  tracker: KitchenStatusTracker;
+  editData: Partial<KitchenStatusTracker>;
+  setEditData: Dispatch<SetStateAction<Partial<KitchenStatusTracker>>>;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      {isExpansion ? (
+        <Input
+          type={type}
+          value={(editData[field] as string) ?? ''}
+          onChange={(e) => setEditData({ ...editData, [field]: e.target.value || null })}
+          className="h-9 text-sm"
+        />
+      ) : (
+        <p className="text-sm font-medium py-1.5">
+          {type === 'date'
+            ? formatDate(tracker[field] as string)
+            : (tracker[field] as string) ?? '—'}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function ClusterDetailPage({
   params,
 }: {
@@ -38,14 +76,14 @@ export default function ClusterDetailPage({
   const { user } = useUser();
   const supabase = createClient();
 
-  const [tracker, setTracker] = useState<ClosureTracker | null>(null);
+  const [tracker, setTracker] = useState<KitchenStatusTracker | null>(null);
   const [brands, setBrands] = useState<KitchenMaster[]>([]);
   const [movements, setMovements] = useState<AssetMovement[]>([]);
   const [sales, setSales] = useState<AssetSale[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [editData, setEditData] = useState<Partial<ClosureTracker>>({});
+  const [editData, setEditData] = useState<Partial<KitchenStatusTracker>>({});
 
   const isExpansion = user?.role === 'expansion' || user?.role === 'admin';
 
@@ -53,13 +91,13 @@ export default function ClusterDetailPage({
     async function fetchData() {
       // Fetch closure tracker
       const { data: trackerData } = await supabase
-        .from('closure_tracker')
+        .from('kitchen_status')
         .select('*')
         .eq('cluster_marker', decodedMarker)
         .single();
 
       if (trackerData) {
-        setTracker(trackerData as ClosureTracker);
+        setTracker(trackerData as KitchenStatusTracker);
         setEditData(trackerData);
       }
 
@@ -114,7 +152,7 @@ export default function ClusterDetailPage({
     if (!tracker) return;
     setSaving(true);
     const { error } = await supabase
-      .from('closure_tracker')
+      .from('kitchen_status')
       .update({
         ...editData,
         updated_by: user?.id,
@@ -123,7 +161,7 @@ export default function ClusterDetailPage({
       .eq('id', tracker.id);
 
     if (!error) {
-      setTracker({ ...tracker, ...editData } as ClosureTracker);
+      setTracker({ ...tracker, ...editData } as KitchenStatusTracker);
     }
     setSaving(false);
   };
@@ -152,25 +190,7 @@ export default function ClusterDetailPage({
     );
   }
 
-  const Field = ({ label, field, type = 'text' }: { label: string; field: keyof ClosureTracker; type?: string }) => (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      {isExpansion ? (
-        <Input
-          type={type}
-          value={(editData[field] as string) ?? ''}
-          onChange={(e) => setEditData({ ...editData, [field]: e.target.value || null })}
-          className="h-9 text-sm"
-        />
-      ) : (
-        <p className="text-sm font-medium py-1.5">
-          {type === 'date'
-            ? formatDate(tracker[field] as string)
-            : (tracker[field] as string) ?? '—'}
-        </p>
-      )}
-    </div>
-  );
+  const fieldProps = { isExpansion, tracker, editData, setEditData };
 
   return (
     <div className="space-y-6">
@@ -234,23 +254,23 @@ export default function ClusterDetailPage({
           <Card className="border-border/60">
             <CardContent className="pt-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Field label="Kitchen Name" field="kitchen_name" />
-                <Field label="Oracle Code" field="oracle_code" />
-                <Field label="City" field="city" />
-                <Field label="Zone" field="zone" />
-                <Field label="Format" field="format" />
-                <Field label="Entity" field="entity" />
-                <Field label="Status 31 March" field="status_31_march" />
-                <Field label="Reason for Change" field="reason_for_change" />
-                <Field label="Lock-in" field="lock_in" />
-                <Field label="Lock-in End Date" field="lock_in_end_date" type="date" />
-                <Field label="Ops Closed" field="ops_closed" />
-                <Field label="Last Ops Date" field="last_ops_date" type="date" />
-                <Field label="Last Rent Date" field="last_rent_date" type="date" />
-                <Field label="LL Clearance" field="ll_clearance" />
-                <Field label="Shut/Suspend/Continue" field="shut_suspend_continue" />
-                <Field label="Notice Period" field="notice_period" />
-                <Field label="HR Remarks" field="hr_remarks" />
+                <TrackerField label="Kitchen Name" field="kitchen_name" {...fieldProps} />
+                <TrackerField label="Oracle Code" field="oracle_code" {...fieldProps} />
+                <TrackerField label="City" field="city" {...fieldProps} />
+                <TrackerField label="Zone" field="zone" {...fieldProps} />
+                <TrackerField label="Format Final" field="format_final" {...fieldProps} />
+                <TrackerField label="Entity" field="entity" {...fieldProps} />
+                <TrackerField label="Status" field="status" {...fieldProps} />
+                <TrackerField label="Reason for Change" field="reason_for_change" {...fieldProps} />
+                <TrackerField label="Lock-in" field="lock_in" {...fieldProps} />
+                <TrackerField label="Lock-in End Date" field="lock_in_end_date" type="date" {...fieldProps} />
+                <TrackerField label="Ops Closed" field="ops_closed" {...fieldProps} />
+                <TrackerField label="Last Ops Date" field="last_ops_date" type="date" {...fieldProps} />
+                <TrackerField label="Last Rent Date" field="last_rent_date" type="date" {...fieldProps} />
+                <TrackerField label="LL Clearance" field="ll_clearance" {...fieldProps} />
+                <TrackerField label="Shut/Suspend/Continue" field="shut_suspend_continue" {...fieldProps} />
+                <TrackerField label="Notice Period" field="notice_period" {...fieldProps} />
+                <TrackerField label="HR Remarks" field="hr_remarks" {...fieldProps} />
               </div>
               <div className="mt-4 space-y-3">
                 <div className="space-y-1.5">
@@ -288,16 +308,16 @@ export default function ClusterDetailPage({
           <Card className="border-border/60">
             <CardContent className="pt-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Field label="Rent" field="rent" />
-                <Field label="Dec Net Revenue" field="dec_net_revenue" />
-                <Field label="Dec EBITDA" field="dec_ebitda" />
-                <Field label="Security Deposit (SD)" field="sd" />
-                <Field label="SD Adjustment" field="sd_adjustment" />
-                <Field label="SD Recovery" field="sd_recovery" />
-                <Field label="Rental Hit Lock-in" field="rental_hit_lock_in" />
-                <Field label="Capex" field="capex" />
-                <Field label="Framework" field="framework" />
-                <Field label="Closure Phasing" field="closure_phasing" />
+                <TrackerField label="Rent" field="rent" {...fieldProps} />
+                <TrackerField label="Dec Net Revenue" field="dec_net_revenue" {...fieldProps} />
+                <TrackerField label="Dec EBITDA" field="dec_ebitda" {...fieldProps} />
+                <TrackerField label="Security Deposit (SD)" field="sd" {...fieldProps} />
+                <TrackerField label="SD Adjustment" field="sd_adjustment" {...fieldProps} />
+                <TrackerField label="SD Recovery" field="sd_recovery" {...fieldProps} />
+                <TrackerField label="Rental Hit Till Lock-in" field="rental_hit_till_lock_in" {...fieldProps} />
+                <TrackerField label="Capex" field="capex" {...fieldProps} />
+                <TrackerField label="Framework" field="framework" {...fieldProps} />
+                <TrackerField label="Closure Phasing" field="closure_phasing" {...fieldProps} />
               </div>
             </CardContent>
           </Card>

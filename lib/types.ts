@@ -46,7 +46,7 @@ export interface ClosureRequestCluster {
   cluster_marker: string;
 }
 
-export interface ClosureTracker {
+export interface KitchenStatusTracker {
   id: string;
   // Identity
   cluster_marker: string;
@@ -56,10 +56,10 @@ export interface ClosureTracker {
   rent: number | null;
   city: string | null;
   zone: string | null;
-  format: string | null;
+  format_final: string | null;
   entity: string | null;
   // Status fields
-  status_31_march: string | null;
+  status: string | null;
   reason_for_change: string | null;
   lock_in: string | null;
   lock_in_end_date: string | null;
@@ -78,7 +78,7 @@ export interface ClosureTracker {
   remarks: string | null;
   notice_period: string | null;
   remarks_2: string | null;
-  rental_hit_lock_in: number | null;
+  rental_hit_till_lock_in: number | null;
   capex: number | null;
   framework: number | null;
   closure_phasing: number | null;

@@ -11,7 +11,7 @@ You are an expert full-stack developer specialising in Next.js, Supabase, and Ta
 - Use Next.js App Router (not Pages Router)
 - Use shadcn/ui for all UI components — never build UI from scratch
 - Use Tailwind CSS for all styling
-- Use Resend for sending emails
+- Use Nodemailer + Gmail SMTP for sending emails
 - Use react-select (creatable) for email tag inputs
 - Write modular code — one component per file, one concern per function
 - Always handle loading states, empty states, and error states in the UI
@@ -51,7 +51,7 @@ When I give you a task, first confirm your understanding of what needs to be bui
 | UI Components | shadcn/ui + Tailwind CSS |
 | Database | Supabase (PostgreSQL) |
 | Authentication | Supabase Auth |
-| Email Sending | Resend |
+| Email Sending | Nodemailer + Gmail SMTP |
 | Hosting | Vercel |
 | Email Tag Input | react-select (Creatable) |
 | Dark/Light Mode | next-themes |
@@ -179,7 +179,7 @@ The closure email lists one row per brand so the receiver knows exactly which br
 ### The closure process
 1. BF selects cluster(s) on the website → adds To/CC emails → previews the email
 2. Email preview auto-generates one row per brand under each selected cluster
-3. BF clicks "Confirm & Send" → email fires via Resend → logged in the database
+3. BF clicks "Confirm & Send" → email fires via Nodemailer + Gmail → logged in the database
 4. Discussion continues over email (Expansion team may push back or extend dates)
 5. Expansion team updates the cluster's closure status on the website
 6. Assets are logged as moved to warehouse or sold to second-hand market
@@ -559,7 +559,7 @@ Expansion can add new rows via "+ Add Row". Finance can only view — no edit or
 No audit logging for kitchen_master.
 
 ### 5. `/closure-requests/new`
-Finance only. Select clusters from a searchable list. Add To and CC addresses using react-select Creatable. Preview modal shows exact email with one row per brand per selected cluster. "Confirm & Send" fires the email via Resend.
+Finance only. Select clusters from a searchable list. Add To and CC addresses using react-select Creatable. Preview modal shows exact email with one row per brand per selected cluster. "Confirm & Send" fires the email via Nodemailer + Gmail.
 
 ### 6. `/closure-requests`
 History of all closure emails sent. Expandable rows show which clusters and brands were in each email.
@@ -608,7 +608,9 @@ Regards,
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-RESEND_API_KEY=
+GMAIL_USER=
+GMAIL_APP_PASSWORD=
+EMAIL_FROM_NAME=Kitchen Closure
 NEXT_PUBLIC_APP_URL=
 ```
 
@@ -661,7 +663,7 @@ NEXT_PUBLIC_APP_URL=
 4. Kitchen Master page (`/kitchens`) — inline edit + soft delete
 5. Dashboard (`/dashboard`)
 6. Cluster Detail page (`/cluster/[cluster_marker]`)
-7. Closure Request flow (`/closure-requests/new` + Resend)
+7. Closure Request flow (`/closure-requests/new` + Nodemailer + Gmail)
 8. Assets section (`/assets`)
 9. Audit Log (`/audit-log`)
 10. Settings (`/settings`)

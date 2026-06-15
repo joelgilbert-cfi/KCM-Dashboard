@@ -4,7 +4,7 @@
 - Node.js (v20+)
 - npm or pnpm
 - A Supabase project
-- A Resend account
+- A Gmail or Google Workspace account with an App Password
 
 ## Local Setup
 
@@ -15,7 +15,9 @@
 
 2. **Environment Variables**
    - Copy `.env.local.example` to `.env.local`.
-   - Fill in your Supabase credentials and Resend API key.
+   - Fill in your Supabase credentials, Gmail sender address, Gmail App Password, and app URL.
+   - Gmail App Passwords require 2-Step Verification on the sender account.
+   - No DNS, DKIM, SPF, MX, or domain verification setup is required.
 
 3. **Database Setup**
    - Apply the migrations located in `supabase/migrations/` to your Supabase project.

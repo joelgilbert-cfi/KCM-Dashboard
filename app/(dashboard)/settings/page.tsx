@@ -38,7 +38,6 @@ import {
   Shield,
   Settings,
   Users,
-  Trash2,
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -240,7 +239,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <span className="text-muted-foreground">Email Service</span>
-              <p className="font-medium mt-0.5">Resend</p>
+              <p className="font-medium mt-0.5">Nodemailer + Gmail</p>
             </div>
           </div>
         </CardContent>
