@@ -98,7 +98,6 @@ export default function KitchensPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailError, setEmailError] = useState('');
 
-  const isExpansion = user?.role === 'expansion' || user?.role === 'admin';
   const isFinance = user?.role === 'finance' || user?.role === 'admin';
 
   const fetchKitchens = useCallback(async () => {
@@ -373,7 +372,7 @@ export default function KitchensPage() {
               Email Selected ({selectedKitchenIds.length})
             </Button>
           )}
-          {isExpansion && (
+          {isFinance && (
             <Button onClick={() => setShowAdd(true)} className="bg-brand hover:bg-brand-dark">
               <Plus className="mr-2 h-4 w-4" />
               Add Kitchen
@@ -461,13 +460,13 @@ export default function KitchensPage() {
                         />
                       </TableHead>
                     )}
-                    {isExpansion && <TableHead className="w-10" />}
+                    {isFinance && <TableHead className="w-10" />}
                     <TableHead className="text-xs font-semibold">Cluster Marker</TableHead>
                     <TableHead className="text-xs font-semibold">Brand</TableHead>
                     <TableHead className="text-xs font-semibold">Kitchen Name</TableHead>
                     <TableHead className="text-xs font-semibold">Format</TableHead>
                     <TableHead className="text-xs font-semibold">Status</TableHead>
-                    {isExpansion && <TableHead className="w-10" />}
+                    {isFinance && <TableHead className="w-10" />}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -484,7 +483,7 @@ export default function KitchensPage() {
                           />
                         </TableCell>
                       )}
-                      {isExpansion && (
+                      {isFinance && (
                         <TableCell>
                           {editingId === kitchen.id ? (
                             <div className="flex gap-1">
@@ -592,7 +591,7 @@ export default function KitchensPage() {
                           <Badge className={getStatusColor(kitchen.status)}>{kitchen.status}</Badge>
                         )}
                       </TableCell>
-                      {isExpansion && (
+                      {isFinance && (
                         <TableCell>
                           {editingId !== kitchen.id && (
                             <button
