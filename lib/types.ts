@@ -11,6 +11,15 @@ export interface User {
   created_at: string;
 }
 
+export interface EmailContact {
+  id: string;
+  name: string;
+  email: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type KitchenStatus = 'Active' | 'Under Closure' | 'Closed';
 
 export interface KitchenMaster {

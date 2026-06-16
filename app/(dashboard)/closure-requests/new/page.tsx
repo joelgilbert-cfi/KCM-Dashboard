@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase';
 import { useUser } from '@/hooks/use-user';
 import type { KitchenMaster } from '@/lib/types';
 import { formatDateForEmail } from '@/lib/utils';
+import { EmailRecipientSelect, type EmailOption } from '@/components/email-recipient-select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -50,15 +51,6 @@ import {
   Eye,
 } from 'lucide-react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-
-// Dynamically import react-select to avoid SSR issues
-const CreatableSelect = dynamic(() => import('react-select/creatable'), { ssr: false });
-
-interface EmailOption {
-  label: string;
-  value: string;
-}
 
 export default function NewClosureRequestPage() {
   const router = useRouter();
@@ -191,38 +183,6 @@ export default function NewClosureRequestPage() {
     }
   };
 
-  // Custom styles for react-select to match shadcn theme
-  const selectStyles = {
-    control: (base: Record<string, unknown>) => ({
-      ...base,
-      backgroundColor: 'var(--color-card)',
-      borderColor: 'var(--color-border)',
-      borderRadius: 'var(--radius-md)',
-      minHeight: '2.5rem',
-      fontSize: '0.875rem',
-    }),
-    menu: (base: Record<string, unknown>) => ({
-      ...base,
-      backgroundColor: 'var(--color-card)',
-      border: '1px solid var(--color-border)',
-      borderRadius: 'var(--radius-md)',
-    }),
-    option: (base: Record<string, unknown>, state: { isFocused: boolean }) => ({
-      ...base,
-      backgroundColor: state.isFocused ? 'var(--color-accent)' : 'transparent',
-      fontSize: '0.875rem',
-    }),
-    multiValue: (base: Record<string, unknown>) => ({
-      ...base,
-      backgroundColor: 'var(--color-secondary)',
-      borderRadius: 'var(--radius-sm)',
-    }),
-    input: (base: Record<string, unknown>) => ({
-      ...base,
-      color: 'var(--color-foreground)',
-    }),
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -318,24 +278,18 @@ export default function NewClosureRequestPage() {
         <CardContent className="space-y-4">
           <div>
             <Label className="text-sm mb-2 block">To *</Label>
-            <CreatableSelect
-              isMulti
+            <EmailRecipientSelect
               value={toEmails}
-              onChange={(val) => setToEmails(val as EmailOption[])}
+              onChange={setToEmails}
               placeholder="Type email and press Enter..."
-              styles={selectStyles}
-              formatCreateLabel={(input: string) => `Add "${input}"`}
             />
           </div>
           <div>
             <Label className="text-sm mb-2 block">CC</Label>
-            <CreatableSelect
-              isMulti
+            <EmailRecipientSelect
               value={ccEmails}
-              onChange={(val) => setCcEmails(val as EmailOption[])}
+              onChange={setCcEmails}
               placeholder="Type email and press Enter..."
-              styles={selectStyles}
-              formatCreateLabel={(input: string) => `Add "${input}"`}
             />
           </div>
         </CardContent>

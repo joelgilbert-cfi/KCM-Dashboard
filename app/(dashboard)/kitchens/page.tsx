@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase';
 import { useUser } from '@/hooks/use-user';
 import type { KitchenMaster } from '@/lib/types';
 import { formatDateForEmail } from '@/lib/utils';
+import { EmailRecipientSelect, type EmailOption } from '@/components/email-recipient-select';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -47,10 +48,8 @@ import {
   Send,
   Eye,
 } from 'lucide-react';
-import dynamic from 'next/dynamic';
 
 const FORMATS = ['Cloud', 'Cloud Kitchen', 'Restaurant', 'Kiosk', 'B2B', 'Franchise'];
-const CreatableSelect = dynamic(() => import('react-select/creatable'), { ssr: false });
 
 type SortOption =
   | 'cluster-asc'
@@ -62,11 +61,6 @@ type SortOption =
   | 'kitchen-asc'
   | 'kitchen-desc';
 
-interface EmailOption {
-  label: string;
-  value: string;
-}
-
 export default function KitchensPage() {
   const { user } = useUser();
   const supabase = createClient();
@@ -76,7 +70,6 @@ export default function KitchensPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterFormat, setFilterFormat] = useState<string>('all');
   const [sortBy, setSortBy] = useState<SortOption>('cluster-asc');
-  const [contactOptions, setContactOptions] = useState<EmailOption[]>([]);
 
   // Editing state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -127,28 +120,6 @@ export default function KitchensPage() {
     fetchKitchens();
   }, [fetchKitchens]);
 
-  useEffect(() => {
-    async function fetchContacts() {
-      const { data } = await supabase
-        .from('users')
-        .select('name, email')
-        .order('name', { ascending: true });
-
-      if (data) {
-        setContactOptions(
-          data
-            .filter((u) => u.email)
-            .map((u) => ({
-              label: u.name ? `${u.name} <${u.email}>` : u.email,
-              value: u.email,
-            }))
-        );
-      }
-    }
-
-    fetchContacts();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   const compareText = (a: string | null | undefined, b: string | null | undefined) =>
     (a ?? '').localeCompare(b ?? '', undefined, { numeric: true, sensitivity: 'base' });
 
@@ -194,39 +165,6 @@ export default function KitchensPage() {
   const allVisibleSelected =
     visibleKitchenIds.length > 0 && visibleKitchenIds.every((id) => selectedKitchenIds.includes(id));
   const canPreviewEmail = selectedKitchenIds.length > 0 && toEmails.length > 0;
-
-  const selectStyles = {
-    control: (base: Record<string, unknown>) => ({
-      ...base,
-      backgroundColor: 'var(--color-card)',
-      borderColor: 'var(--color-border)',
-      borderRadius: 'var(--radius-md)',
-      minHeight: '2.5rem',
-      fontSize: '0.875rem',
-    }),
-    menu: (base: Record<string, unknown>) => ({
-      ...base,
-      backgroundColor: 'var(--color-card)',
-      border: '1px solid var(--color-border)',
-      borderRadius: 'var(--radius-md)',
-      zIndex: 60,
-    }),
-    option: (base: Record<string, unknown>, state: { isFocused: boolean }) => ({
-      ...base,
-      backgroundColor: state.isFocused ? 'var(--color-accent)' : 'transparent',
-      color: 'var(--color-foreground)',
-      fontSize: '0.875rem',
-    }),
-    multiValue: (base: Record<string, unknown>) => ({
-      ...base,
-      backgroundColor: 'var(--color-secondary)',
-      borderRadius: 'var(--radius-sm)',
-    }),
-    input: (base: Record<string, unknown>) => ({
-      ...base,
-      color: 'var(--color-foreground)',
-    }),
-  };
 
   const toggleKitchenSelection = (kitchenId: string) => {
     setSelectedKitchenIds((prev) =>
@@ -760,26 +698,18 @@ export default function KitchensPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>To *</Label>
-                  <CreatableSelect
-                    isMulti
-                    options={contactOptions}
+                  <EmailRecipientSelect
                     value={toEmails}
-                    onChange={(value) => setToEmails(value as EmailOption[])}
+                    onChange={setToEmails}
                     placeholder="Type a name or email..."
-                    styles={selectStyles}
-                    formatCreateLabel={(input: string) => `Add "${input}"`}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>CC</Label>
-                  <CreatableSelect
-                    isMulti
-                    options={contactOptions}
+                  <EmailRecipientSelect
                     value={ccEmails}
-                    onChange={(value) => setCcEmails(value as EmailOption[])}
+                    onChange={setCcEmails}
                     placeholder="Type a name or email..."
-                    styles={selectStyles}
-                    formatCreateLabel={(input: string) => `Add "${input}"`}
                   />
                 </div>
               </div>
