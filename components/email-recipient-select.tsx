@@ -37,6 +37,19 @@ const toCustomOption = (email: string): EmailOption => ({
   source: 'custom',
 });
 
+const normalizeOption = (option: Partial<EmailOption>): EmailOption => {
+  const email = String(option.email || option.value || option.label || '').trim();
+  const name = String(option.name || option.label || email).trim();
+
+  return {
+    label: option.label || (name && name !== email ? `${name} <${email}>` : email),
+    value: option.value || email,
+    name: name || email,
+    email,
+    source: option.source || 'custom',
+  };
+};
+
 export function EmailRecipientSelect({
   value,
   onChange,
@@ -63,8 +76,8 @@ export function EmailRecipientSelect({
           setOptions([]);
           return;
         }
-        const data = (await response.json()) as { contacts?: EmailOption[] };
-        setOptions(data.contacts ?? []);
+        const data = (await response.json()) as { contacts?: Partial<EmailOption>[] };
+        setOptions((data.contacts ?? []).map(normalizeOption).filter((contact) => contact.email));
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return;
         setOptions([]);
@@ -79,7 +92,8 @@ export function EmailRecipientSelect({
     };
   }, [inputValue]);
 
-  const selectedEmails = new Set(value.map((option) => option.email.toLowerCase()));
+  const normalizedValue = value.map(normalizeOption).filter((option) => option.email);
+  const selectedEmails = new Set(normalizedValue.map((option) => option.email.toLowerCase()));
   const filteredOptions = options.filter((option) => !selectedEmails.has(option.email.toLowerCase()));
 
   const styles: StylesConfig<EmailOption, true> = {
@@ -159,7 +173,7 @@ export function EmailRecipientSelect({
   return (
     <CreatableSelect
       isMulti
-      value={value}
+      value={normalizedValue}
       options={filteredOptions}
       inputValue={inputValue}
       onInputChange={(newValue, meta) => {
@@ -170,7 +184,9 @@ export function EmailRecipientSelect({
           setLoading(false);
         }
       }}
-      onChange={(newValue) => onChange([...(newValue as MultiValue<EmailOption>)])}
+      onChange={(newValue) => {
+        onChange([...(newValue as MultiValue<Partial<EmailOption>>)].map(normalizeOption));
+      }}
       onCreateOption={(email) => {
         const trimmed = email.trim();
         if (!isValidEmail(trimmed)) return;
