@@ -95,10 +95,17 @@ export default function NewClosureRequestPage() {
         clusters.set(k.cluster_marker, k.kitchen_name || k.cluster_marker);
       }
     });
-    return Array.from(clusters.entries()).map(([marker, name]) => ({
-      marker,
-      name,
-    }));
+    return Array.from(clusters.entries())
+      .map(([marker, name]) => ({
+        marker,
+        name,
+      }))
+      .sort((a, b) =>
+        a.marker.localeCompare(b.marker, undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        })
+      );
   }, [kitchens]);
 
   // Get brands for selected clusters
