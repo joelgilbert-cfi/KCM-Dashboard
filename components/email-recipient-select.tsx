@@ -22,8 +22,8 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const isValidEmail = (value: string) => emailPattern.test(value.trim());
 
-const initialsFor = (name: string) => {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+const initialsFor = (name?: string) => {
+  const parts = (name || '?').trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
   return `${parts[0].slice(0, 1)}${parts[1].slice(0, 1)}`.toUpperCase();
@@ -144,10 +144,14 @@ export function EmailRecipientSelect({
   };
 
   const formatOptionLabel = (option: EmailOption, meta: FormatOptionLabelMeta<EmailOption>) => {
+    const normalizedOption = normalizeOption(option);
+
     if (meta.context === 'value') {
       return (
         <span className="block max-w-[12rem] truncate text-[13px] leading-5">
-          {option.name && option.name !== option.email ? option.name : option.email}
+          {normalizedOption.name && normalizedOption.name !== normalizedOption.email
+            ? normalizedOption.name
+            : normalizedOption.email}
         </span>
       );
     }
@@ -155,15 +159,15 @@ export function EmailRecipientSelect({
     return (
       <div className="flex items-center gap-3 px-3 py-2">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white">
-          {initialsFor(option.name)}
+          {initialsFor(normalizedOption.name)}
         </div>
         <div className="min-w-0">
-          <div className="truncate text-sm font-medium">{option.name}</div>
-          <div className="truncate text-xs text-muted-foreground">{option.email}</div>
+          <div className="truncate text-sm font-medium">{normalizedOption.name}</div>
+          <div className="truncate text-xs text-muted-foreground">{normalizedOption.email}</div>
         </div>
-        {option.source && option.source !== 'custom' && (
+        {normalizedOption.source && normalizedOption.source !== 'custom' && (
           <span className="ml-auto rounded-full bg-secondary px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-            {option.source === 'user' ? 'User' : 'Contact'}
+            {normalizedOption.source === 'user' ? 'User' : 'Contact'}
           </span>
         )}
       </div>
