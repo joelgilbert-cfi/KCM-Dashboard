@@ -52,14 +52,14 @@ import {
 const FORMATS = ['Cloud', 'Cloud Kitchen', 'Restaurant', 'Kiosk', 'B2B', 'Franchise'];
 
 type SortOption =
-  | 'cluster-asc'
-  | 'cluster-desc'
-  | 'recently-added'
-  | 'first-added'
-  | 'brand-asc'
-  | 'brand-desc'
-  | 'kitchen-asc'
-  | 'kitchen-desc';
+  | 'Cluster-Asc'
+  | 'Cluster-Desc'
+  | 'Recently-Added'
+  | 'First-Added'
+  | 'Brand-Asc'
+  | 'Brand-Desc'
+  | 'Kitchen-Asc'
+  | 'Kitchen-Desc';
 
 export default function KitchensPage() {
   const { user } = useUser();
@@ -67,9 +67,9 @@ export default function KitchensPage() {
   const [kitchens, setKitchens] = useState<KitchenMaster[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterFormat, setFilterFormat] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<SortOption>('cluster-asc');
+  const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [filterFormat, setFilterFormat] = useState<string>('All');
+  const [sortBy, setSortBy] = useState<SortOption>('Cluster-Asc');
 
   // Editing state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -99,6 +99,8 @@ export default function KitchensPage() {
   const [emailError, setEmailError] = useState('');
 
   const isFinance = user?.role === 'finance' || user?.role === 'admin';
+  const canManageKitchenMaster =
+    user?.role === 'finance' || user?.role === 'expansion' || user?.role === 'admin';
 
   const fetchKitchens = useCallback(async () => {
     const { data, error } = await supabase
@@ -133,27 +135,27 @@ export default function KitchensPage() {
         k.cluster_marker?.toLowerCase().includes(q) ||
         k.brand?.toLowerCase().includes(q) ||
         k.kitchen_name?.toLowerCase().includes(q);
-      const matchesStatus = filterStatus === 'all' || k.status === filterStatus;
-      const matchesFormat = filterFormat === 'all' || k.format === filterFormat;
+      const matchesStatus = filterStatus === 'All' || k.status === filterStatus;
+      const matchesFormat = filterFormat === 'All' || k.format === filterFormat;
       return matchesSearch && matchesStatus && matchesFormat;
     })
     .sort((a, b) => {
       switch (sortBy) {
-        case 'cluster-desc':
+        case 'Cluster-Desc':
           return compareText(b.cluster_marker, a.cluster_marker) || compareText(a.brand, b.brand);
-        case 'recently-added':
+        case 'Recently-Added':
           return compareDate(b.added_at, a.added_at);
-        case 'first-added':
+        case 'First-Added':
           return compareDate(a.added_at, b.added_at);
-        case 'brand-asc':
+        case 'Brand-Asc':
           return compareText(a.brand, b.brand) || compareText(a.cluster_marker, b.cluster_marker);
-        case 'brand-desc':
+        case 'Brand-Desc':
           return compareText(b.brand, a.brand) || compareText(a.cluster_marker, b.cluster_marker);
-        case 'kitchen-asc':
+        case 'Kitchen-Asc':
           return compareText(a.kitchen_name, b.kitchen_name) || compareText(a.cluster_marker, b.cluster_marker);
-        case 'kitchen-desc':
+        case 'Kitchen-Desc':
           return compareText(b.kitchen_name, a.kitchen_name) || compareText(a.cluster_marker, b.cluster_marker);
-        case 'cluster-asc':
+        case 'Cluster-Asc':
         default:
           return compareText(a.cluster_marker, b.cluster_marker) || compareText(a.brand, b.brand);
       }
@@ -372,7 +374,7 @@ export default function KitchensPage() {
               Email Selected ({selectedKitchenIds.length})
             </Button>
           )}
-          {isFinance && (
+          {canManageKitchenMaster && (
             <Button onClick={() => setShowAdd(true)} className="bg-brand hover:bg-brand-dark">
               <Plus className="mr-2 h-4 w-4" />
               Add Kitchen
@@ -388,7 +390,7 @@ export default function KitchensPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="kitchen-search"
-                placeholder="Search by cluster, brand, or kitchen name..."
+                placeholder="Search by Cluster, Brand, or Kitchen Name..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -400,33 +402,33 @@ export default function KitchensPage() {
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="cluster-asc">Cluster: Ascending</SelectItem>
-                <SelectItem value="cluster-desc">Cluster: Descending</SelectItem>
-                <SelectItem value="recently-added">Recently Added</SelectItem>
-                <SelectItem value="first-added">First Added</SelectItem>
-                <SelectItem value="brand-asc">Brand: A to Z</SelectItem>
-                <SelectItem value="brand-desc">Brand: Z to A</SelectItem>
-                <SelectItem value="kitchen-asc">Kitchen: A to Z</SelectItem>
-                <SelectItem value="kitchen-desc">Kitchen: Z to A</SelectItem>
+                <SelectItem value="Cluster-Asc">Cluster: Ascending</SelectItem>
+                <SelectItem value="Cluster-Desc">Cluster: Descending</SelectItem>
+                <SelectItem value="Recently-Added">Recently Added</SelectItem>
+                <SelectItem value="First-Added">First Added</SelectItem>
+                <SelectItem value="Brand-Asc">Brand: A to Z</SelectItem>
+                <SelectItem value="Brand-Desc">Brand: Z to A</SelectItem>
+                <SelectItem value="Kitchen-Asc">Kitchen: A to Z</SelectItem>
+                <SelectItem value="Kitchen-Desc">Kitchen: Z to A</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v ?? 'all')}>
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v ?? 'All')}>
               <SelectTrigger className="w-full lg:w-40">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="All">All Status</SelectItem>
                 <SelectItem value="Active">Active</SelectItem>
                 <SelectItem value="Under Closure">Under Closure</SelectItem>
                 <SelectItem value="Closed">Closed</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filterFormat} onValueChange={(v) => setFilterFormat(v ?? 'all')}>
+            <Select value={filterFormat} onValueChange={(v) => setFilterFormat(v ?? 'All')}>
               <SelectTrigger className="w-full lg:w-40">
                 <SelectValue placeholder="Format" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Formats</SelectItem>
+                <SelectItem value="All">All Formats</SelectItem>
                 {FORMATS.map((f) => (
                   <SelectItem key={f} value={f}>{f}</SelectItem>
                 ))}
@@ -439,7 +441,7 @@ export default function KitchensPage() {
             <div className="text-center py-12 text-muted-foreground">
               <ChefHat className="h-12 w-12 mx-auto mb-3 opacity-30" />
               <p className="text-sm">
-                {search || filterStatus !== 'all' || filterFormat !== 'all'
+                {search || filterStatus !== 'All' || filterFormat !== 'All'
                   ? 'No kitchens match your filters'
                   : 'No kitchens added yet'}
               </p>
@@ -460,19 +462,19 @@ export default function KitchensPage() {
                         />
                       </TableHead>
                     )}
-                    {isFinance && <TableHead className="w-10" />}
+                    {canManageKitchenMaster && <TableHead className="w-10" />}
                     <TableHead className="text-xs font-semibold">Cluster Marker</TableHead>
                     <TableHead className="text-xs font-semibold">Brand</TableHead>
                     <TableHead className="text-xs font-semibold">Kitchen Name</TableHead>
                     <TableHead className="text-xs font-semibold">Format</TableHead>
                     <TableHead className="text-xs font-semibold">Status</TableHead>
-                    {isFinance && <TableHead className="w-10" />}
+                    {canManageKitchenMaster && <TableHead className="w-10" />}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.map((kitchen) => (
                     <TableRow key={kitchen.id} className="group">
-                      {isFinance && (
+                      {canManageKitchenMaster && (
                         <TableCell>
                           <input
                             type="checkbox"
@@ -483,7 +485,7 @@ export default function KitchensPage() {
                           />
                         </TableCell>
                       )}
-                      {isFinance && (
+                      {canManageKitchenMaster && (
                         <TableCell>
                           {editingId === kitchen.id ? (
                             <div className="flex gap-1">
@@ -591,7 +593,7 @@ export default function KitchensPage() {
                           <Badge className={getStatusColor(kitchen.status)}>{kitchen.status}</Badge>
                         )}
                       </TableCell>
-                      {isFinance && (
+                      {canManageKitchenMaster && (
                         <TableCell>
                           {editingId !== kitchen.id && (
                             <button
@@ -681,7 +683,7 @@ export default function KitchensPage() {
 
       {/* Closure Email Dialog */}
       <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />

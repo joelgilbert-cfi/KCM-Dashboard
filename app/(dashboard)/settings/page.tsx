@@ -385,7 +385,7 @@ export default function SettingsPage() {
               <Input
                 value={newUser.name}
                 onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                placeholder="e.g. Priya Sharma"
+                placeholder="e.g. Sonal Raj"
               />
             </div>
             <div>
@@ -394,7 +394,7 @@ export default function SettingsPage() {
                 type="email"
                 value={newUser.email}
                 onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                placeholder="e.g. priya@curefoods.com"
+                placeholder="e.g. sonal.raj@curefoods.in"
               />
             </div>
             <div>
@@ -413,9 +413,9 @@ export default function SettingsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="finance">Finance</SelectItem>
-                  <SelectItem value="expansion">Expansion</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="Finance">Finance</SelectItem>
+                  <SelectItem value="Expansion">Expansion</SelectItem>
+                  <SelectItem value="Admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>

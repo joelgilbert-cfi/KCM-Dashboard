@@ -21,19 +21,13 @@ CREATE POLICY "admins_manage_users" ON users
     public.current_user_role() = 'admin'
   );
 
--- Kitchen Master: Finance can manage
-CREATE POLICY "finance_manage_kitchen_master" ON kitchen_master
+-- Kitchen Master: Finance and Expansion can manage
+CREATE POLICY "finance_expansion_manage_kitchen_master" ON kitchen_master
   FOR ALL USING (
-    public.current_user_role() IN ('finance', 'admin')
+    public.current_user_role() IN ('finance', 'expansion', 'admin')
   )
   WITH CHECK (
-    public.current_user_role() IN ('finance', 'admin')
-  );
-
--- Kitchen Master: Expansion can view
-CREATE POLICY "expansion_view_kitchen_master" ON kitchen_master
-  FOR SELECT USING (
-    public.current_user_role() = 'expansion'
+    public.current_user_role() IN ('finance', 'expansion', 'admin')
   );
 
 -- Closure Tracker: Expansion can manage

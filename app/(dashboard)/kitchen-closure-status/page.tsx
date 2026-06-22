@@ -543,7 +543,7 @@ export default function KitchenClosureStatusPage() {
       </Card>
 
       <Dialog open={showAdd} onOpenChange={closeAddDialog}>
-        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Add Kitchen Closure Status Row</DialogTitle>
             <DialogDescription>Add one cluster-level closure tracker record.</DialogDescription>
