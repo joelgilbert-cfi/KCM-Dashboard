@@ -1,17 +1,17 @@
-# Module: Kitchen Master
+# Kitchen Master Module
 
 ## Overview
-The Kitchen Master is the source of truth for all physical locations. It tracks combinations of `cluster_marker` and `brand`.
+The Kitchen Master module serves as the core directory of all kitchen facilities within the system.
 
-## Source Path
-- UI: `app/(dashboard)/kitchens/page.tsx`
+## Data Model
+Backed by the `kitchen_master` table.
+- Primary identifier: `id` (UUID).
+- Natural key: `cluster_marker` and `brand` (unique constraint).
 
-## Core Responsibilities
-- View all kitchens.
-- Inline editing of kitchen records (handled by the Expansion team).
-- Add new kitchens.
-- Soft-delete kitchens (sets `removed_at`, never hard deletes).
+## Functionality
+- **Listing**: Displays all active, under-closure, or closed kitchens.
+- **Status Tracking**: The baseline `status` field (`Active`, `Under Closure`, `Closed`) dictates how the kitchen is treated in other modules (e.g., the Kitchen Closure Status module focuses on those `Under Closure`).
+- **Management**: Users with appropriate roles can add new kitchens or update their status.
 
-## Interactions
-- Used as the reference list when the Business Finance team initiates a closure request. The system looks up all brands belonging to a selected cluster.
-- Changes to this module are explicitly **excluded** from the automated audit log.
+## Dependencies
+- Changes to a kitchen's status in `kitchen_master` often trigger workflows in the `kitchen_status` tracking module.

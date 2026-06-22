@@ -1,24 +1,32 @@
-# KCM Dashboard — API Reference
+# API Reference
 
-## Overview
-As this is a Next.js App Router application relying heavily on Server Components and Server Actions directly querying Supabase, there is limited traditional REST API surface. 
+The KCM Dashboard utilizes Next.js Route Handlers (`app/api/...`) for specific integrations that are better suited for REST-like endpoints rather than Server Actions.
 
-## Internal API Routes
-These routes exist within the Next.js `app/api` directory.
+## Endpoint: `/api/send-closure-email`
+- **Method**: `POST`
+- **Purpose**: Dispatches the closure notification email to the specified recipients using Nodemailer.
+- **Request Body**:
+  ```json
+  {
+    "requestId": "UUID",
+    "to": ["email@example.com"],
+    "cc": ["email2@example.com"],
+    "clusters": ["CLUSTER_MARKER"]
+  }
+  ```
+- **Process**:
+  1. Validates the request data.
+  2. Constructs the HTML email body.
+  3. Uses `nodemailer` to send the email via the configured SMTP server (credentials in `.env.local`).
+  4. Upon success, updates the `closure_requests` table status to `Sent` and records the `email_sent_at` timestamp.
+- **Dependencies**: `nodemailer`.
 
-### `POST /api/send-closure-email`
-Used to send a closure notification email to the specified recipients.
+## Endpoint: `/api/email-contacts`
+- **Method**: `GET`
+- **Purpose**: Fetches the list of standard and user-defined email contacts for the CC autocomplete field in the Closure Request form.
+- **Response**: Array of `EmailContact` objects.
 
-- **Request Body (JSON)**:
-  - `toEmails` (array of strings): Primary recipients.
-  - `ccEmails` (array of strings): CC recipients.
-  - `senderName` (string): Name used in the email signature.
-  - `brands` (array of objects): Brand rows used to generate the email table.
+## Endpoint: `/api/admin/...`
+- Various admin-related utility endpoints, if applicable. Mostly handled by Server Actions in the App Router architecture.
 
-- **Behavior**:
-  1. Validates input.
-  2. Constructs the HTML email template.
-  3. Sends the email via Nodemailer using Gmail SMTP.
-  4. Returns `{ success: true, messageId }` when Gmail accepts the message.
-
-- **Requires Auth**: Yes (handled via Supabase SSR).
+*Note: The majority of data fetching and mutation in this application is handled via Next.js Server Actions directly imported into Client Components, bypassing traditional API routes.*

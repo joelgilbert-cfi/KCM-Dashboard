@@ -1,28 +1,21 @@
-# KCM Dashboard — Tech Stack
+# Tech Stack
 
-## Core Technologies
+The application leverages a modern, React-based web stack optimized for rapid development and serverless deployment.
+
+## Frontend
 - **Framework**: Next.js 16.2.9 (App Router)
-- **Language**: TypeScript 5
-- **UI Framework**: React 19.2.4
+- **UI Library**: React 19
+- **Styling**: TailwindCSS v4
+- **Component Library**: shadcn/ui (radix-ui primitives, cmdk, lucide-react)
+- **Forms & Validation**: Controlled forms, typical React patterns
 
-## Database & Backend
+## Backend & Data
+- **Backend Framework**: Next.js API Routes & Server Actions
 - **Database**: PostgreSQL (hosted on Supabase)
-- **Auth**: Supabase Auth (SSR `@supabase/ssr` & Client `@supabase/supabase-js`)
-- **API**: Next.js Server Actions and Route Handlers
+- **Authentication**: Supabase Auth (integrated via `@supabase/ssr`)
+- **Email Service**: Nodemailer (used for sending Closure Requests via `app/api/send-closure-email/route.ts`)
 
-## Styling & UI Components
-- **Styling**: Tailwind CSS 4 (`@tailwindcss/postcss`)
-- **UI Library**: shadcn/ui (`shadcn`)
-- **Base Components**: Base UI (`@base-ui/react`)
-- **Theme**: `next-themes` (Dark/Light mode support)
-- **Icons**: `lucide-react`
-- **Class Merging**: `clsx`, `tailwind-merge`
-
-## Utilities & External Services
-- **Emails**: Nodemailer with Gmail SMTP for sending closure notification emails.
-- **Form/Input**: `react-select` (Creatable variant used for email tag inputs).
-
-## Key Files
-- `package.json`: Main dependencies.
-- `tailwind.config.ts`: Defines custom colors (brand: navy #0D1F6E).
-- `app/globals.css`: shadcn/ui CSS variables.
+## Tooling
+- **Language**: TypeScript (strict mode)
+- **Linting**: ESLint (Next.js config)
+- **Package Manager**: npm

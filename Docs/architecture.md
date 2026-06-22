@@ -1,32 +1,21 @@
-# KCM Dashboard — Architecture
+# Architecture
 
-## Overview
-The project is a standard **Next.js App Router** monolith backed by **Supabase**. It follows a server-rendered first approach using Server Components and Server Actions where possible, paired with Client Components for interactivity.
+The KCM Dashboard follows a modern Serverless Next.js architecture heavily reliant on Server Components and Supabase for backend-as-a-service (BaaS) functionality.
 
-## Architecture Pattern
-- **Frontend**: Next.js App Router (`app/`).
-- **Backend/Database**: Supabase handles Authentication, PostgreSQL database, and Row Level Security (RLS).
-- **Styling**: Utility-first CSS via Tailwind. Components are isolated and built with shadcn/ui.
-
-## Directory Structure
-- `app/`: Next.js file-system routing.
-  - `(dashboard)/`: Grouped routes for the main dashboard (requires auth).
-  - `api/`: Route handlers (e.g., `/api/send-closure-email`).
-  - `login/`: Public route for authentication.
-- `components/`: React components.
-  - `ui/`: shadcn/ui generic components (e.g., Button, Input, Table).
-- `lib/`: Utility functions and shared definitions.
-  - `types.ts`: TypeScript interfaces for database models.
-  - `supabase.ts`: Supabase client initialization.
-- `supabase/migrations/`: SQL migration files defining schema, triggers, and RLS.
+## Core Patterns
+- **Next.js App Router**: Utilizes the Next.js `app` directory structure, with pages composed predominantly of React Server Components (RSC).
+- **Server Actions & API Routes**: Data mutation is handled via Server Actions (and some dedicated API routes like `/api/send-closure-email`), keeping secrets and complex business logic securely on the server.
+- **Supabase BaaS**: Supabase PostgreSQL is used as the primary data store. Supabase Auth is used for user authentication and role management.
+- **Row Level Security (RLS)**: Data access control is enforced at the database level using Supabase RLS policies based on the authenticated user's role.
 
 ## Data Flow
-1. **Reads**: Server Components fetch data directly from Supabase.
-2. **Writes**: Client components trigger Server Actions or API routes, which mutate data in Supabase.
-3. **Auditing**: Writes to core tables trigger a PostgreSQL function (`log_audit`) that automatically inserts a record into the `audit_log` table.
+1. **Client -> Server**: Client components (like forms or data tables) invoke Server Actions or `fetch` requests to Next.js API routes.
+2. **Server -> Supabase**: The Server Action/API route uses the `@supabase/ssr` client to communicate with the database. Supabase verifies the JWT and applies RLS policies.
+3. **Supabase -> Server**: The query results are returned to the Next.js server.
+4. **Server -> Client**: The Next.js server passes the data down to the React Client Components as props or returns JSON from an API route.
 
-## Security & Authentication
-- Managed by **Supabase Auth**.
-- **Row Level Security (RLS)** is strictly enforced at the database level.
-- Three user roles: `finance`, `expansion`, `admin`.
-- Example RLS: Expansion can manage the `kitchen_master`, Finance can only view it. Finance can manage `fixed_asset_register`, Expansion can only view it.
+## Module Boundaries
+- `app/`: Contains all Next.js routes, pages, layouts, and API endpoints.
+- `components/`: Contains shared React components, primarily shadcn/ui components (`components/ui`) and complex interactive widgets (e.g., `email-recipient-select.tsx`).
+- `lib/`: Contains utility functions (`utils.ts`), TypeScript definitions (`types.ts`), and the Supabase client instantiation (`supabase.ts`).
+- `supabase/migrations/`: Contains the definitive schema definitions, RLS policies, and triggers for the database.

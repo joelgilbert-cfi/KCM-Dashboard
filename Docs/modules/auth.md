@@ -1,16 +1,20 @@
-# Module: Authentication and Roles
+# Authentication and Authorization
 
 ## Overview
-Authentication is handled entirely by Supabase Auth (Email/Password).
-The application is protected by middleware; unauthenticated users are redirected to `/login`.
+Authentication is handled by Supabase Auth. Authorization is handled via a combination of Supabase Row Level Security (RLS) policies at the database level and Next.js layout/page checks at the application level.
 
-## Roles
-The user's role is stored in the `users` table and is mapped to their JWT claims to be used securely within Supabase Row Level Security (RLS) policies.
+## User Roles
+There are three primary roles defined in the `users` table:
+1. **Admin (`admin`)**: Full access to all tables and configurations (e.g., managing `email_contacts`).
+2. **Expansion (`expansion`)**: Can manage and update kitchen operational statuses and create closure requests.
+3. **Finance (`finance`)**: Read-only access to operational data, focused on financial metrics.
 
-- **Finance**: Can initiate closure requests. Manages the Fixed Asset Register. Has read-only access to operational tracking.
-- **Expansion**: Manages the Kitchen Master list. Updates closure tracking status. Logs asset movements and sales. Has read-only access to the FAR and closure requests.
-- **Admin**: Can manage users, roles, and settings.
+## RLS Policies
+RLS policies are defined in `supabase/migrations/`. 
+For example, in `kitchen_status`:
+- `expansion` and `admin` can `INSERT`, `UPDATE`, `DELETE`.
+- `finance` can only `SELECT`.
 
-## Implementation Details
-- Client-side: `use-user.ts` (hypothetical) or direct context to fetch user details.
-- Server-side: `@supabase/ssr` is used to securely verify sessions and retrieve user roles.
+## Next.js Implementation
+- User session is retrieved on the server using `@supabase/ssr`.
+- Protected routes typically check for the session in their respective `page.tsx` or `layout.tsx` before rendering. If no session exists, the user is redirected to the `/login` route.

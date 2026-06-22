@@ -1,37 +1,35 @@
-# KCM Dashboard — Developer Setup
+# Development Setup
+
+Follow these steps to set up the KCM Dashboard locally.
 
 ## Prerequisites
 - Node.js (v20+)
-- npm or pnpm
-- A Supabase project
-- A Gmail or Google Workspace account with an App Password
+- npm, yarn, pnpm, or bun
+- A Supabase project (or local Supabase instance)
 
-## Local Setup
+## 1. Clone & Install
+```bash
+git clone https://github.com/joelgilbert-cfi/KCM-Dashboard.git
+cd "KCM Dashboard/V1"
+npm install
+```
 
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+## 2. Environment Configuration
+Copy the example environment file and populate it with your Supabase credentials:
+```bash
+cp .env.local.example .env.local
+```
+Fill in the `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
-2. **Environment Variables**
-   - Copy `.env.local.example` to `.env.local`.
-   - Fill in your Supabase credentials, Gmail sender address, Gmail App Password, and app URL.
-   - Gmail App Passwords require 2-Step Verification on the sender account.
-   - No DNS, DKIM, SPF, MX, or domain verification setup is required.
+## 3. Database Setup
+1. Open the Supabase SQL Editor in your project.
+2. Execute the scripts found in `supabase/migrations/` in numerical order (e.g., `001_create_tables.sql`, `002_audit_trigger.sql`, etc.) to establish the schema, RLS policies, and triggers.
 
-3. **Database Setup**
-   - Apply the migrations located in `supabase/migrations/` to your Supabase project.
-   - Run the files in numerical order:
-     1. `001_create_tables.sql` (Creates tables and RLS)
-     2. `002_audit_trigger.sql` (Creates audit triggers)
-     3. `003_rls_policies.sql` (Sets up specific access policies)
+## 4. Run the Development Server
+```bash
+npm run dev
+```
+Navigate to `http://localhost:3000`.
 
-4. **Run Development Server**
-   ```bash
-   npm run dev
-   ```
-   The application will be available at `http://localhost:3000`.
-
-## Working with Tailwind & shadcn/ui
-- When adding new shadcn/ui components, use the CLI: `npx shadcn@latest add [component]`
-- Styling is defined using utility classes and grouped in `tailwind.config.ts`.
+## 5. Deployment
+The application is optimized for deployment on Vercel. Connect the GitHub repository to Vercel and ensure the environment variables from `.env.local` are mirrored in the Vercel project settings.

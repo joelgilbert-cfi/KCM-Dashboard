@@ -1,22 +1,16 @@
-# KCM Dashboard — Conventions and Patterns
+# Conventions and Patterns
 
-## TypeScript
-- Always use TypeScript interfaces for database structures (located in `lib/types.ts`).
-- Never use plain JavaScript.
+## Next.js App Router
+- **Server Components by Default**: Components in the `app/` directory are Server Components by default. We only use `'use client'` when hooks (`useState`, `useEffect`) or browser APIs are required (e.g., in interactive forms or the `Navbar` toggle).
+- **Data Fetching**: Data fetching is performed on the server within Server Components where possible, passing the resolved data down as props.
+- **Mutations**: Data mutations (inserts, updates) should be handled via Next.js Server Actions.
 
-## Next.js (App Router)
-- Use Server Components by default for reading data.
-- Use `"use client"` only for components that require interactivity (e.g., forms, buttons, state).
-- Use Next.js Server Actions for mutations where appropriate.
-- Fetch data using Supabase's typed client (`@supabase/ssr`).
+## Supabase Integration
+- **Client Instantiation**: Always use the utility functions in `lib/supabase.ts` to create the Supabase client. This ensures the correct cookies and SSR context are maintained.
+- **Types**: Always type Supabase responses using the interfaces defined in `lib/types.ts`.
+- **Row Level Security**: Never bypass RLS unless absolutely necessary for an administrative background job. Rely on the authenticated user's token.
 
-## UI & Styling
-- Build UIs exclusively using `shadcn/ui` components and Tailwind CSS.
-- Do not write custom CSS outside of Tailwind utility classes unless absolutely necessary.
-- Consistent application of the brand color palette (Navy primary `#0D1F6E`).
-- Use `react-select` (Creatable) specifically for email tag inputs.
-
-## Database & Supabase
-- Always handle Row Level Security (RLS) properly. The frontend connects as the authenticated user, so queries will automatically filter based on RLS policies.
-- Do not write manual backend audit logs. The PostgreSQL trigger (`log_audit`) handles it automatically.
-- Never hard delete data (especially in `kitchen_master`); always use soft deletes (`removed_at`).
+## UI and Styling
+- **Tailwind CSS**: Use Tailwind utility classes for styling.
+- **shadcn/ui**: Use the pre-built components in `components/ui/` for consistency. If modifying a shadcn component, do so cautiously as it may break intended accessibility patterns.
+- **Icons**: Use `lucide-react` for all iconography.

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,14 +10,21 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const recoveryStatus = searchParams.get('error');
+  const recoveryError =
+    recoveryStatus === 'recovery_link_expired' || recoveryStatus === 'invalid_recovery_link'
+      ? 'This password recovery link is invalid, expired, or has already been used. Request a new link and use the latest email.'
+      : '';
+  const displayError = error || recoveryError;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +93,12 @@ export default function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="login-password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="login-password">Password</Label>
+                  <Link href="/forgot-password" className="text-xs text-brand hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
                 <div className="relative">
                   <Input
                     id="login-password"
@@ -109,9 +122,9 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {error && (
+              {displayError && (
                 <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
-                  {error}
+                  {displayError}
                 </div>
               )}
 
@@ -138,5 +151,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

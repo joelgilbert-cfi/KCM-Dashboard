@@ -1,26 +1,28 @@
-# MASTER INDEX
+# KCM Dashboard Documentation — Master Index
 
-**Summary**: The Kitchen Closure Management (KCM) Dashboard is a Next.js/Supabase internal tool that replaces Excel sheets and email threads to manage kitchen closures, asset tracking, and audit logging.
+**Project Summary:**
+The KCM (Kitchen Closure Management) Dashboard is an internal Next.js/Supabase application used to track operational statuses, manage physical assets, and automate email notifications related to kitchen facility closures.
 
-## Documentation Index
-
-- [Project Overview](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/project_overview.md) — High-level purpose and user roles.
-- [Architecture](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/architecture.md) — Application structure, data flow, and security.
-- [Tech Stack](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/tech_stack.md) — Frameworks, libraries, and tools.
-- [Data Models](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/data_models.md) — Database tables and schemas.
-- [API Reference](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/api_reference.md) — Internal API endpoints (e.g., email sending).
-- [Config and Env](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/config_and_env.md) — Environment variables and setup requirements.
-- [Dev Setup](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/dev_setup.md) — Instructions for local development.
-- [Conventions and Patterns](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/conventions_and_patterns.md) — Coding standards and React patterns.
-- [Gotchas and Known Issues](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/gotchas_and_known_issues.md) — Important edge cases and historical quirks.
-- [Changelog](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/CHANGELOG.md) — Running history of project updates.
+## Document Directory
+- **[CHANGELOG.md](CHANGELOG.md)**: Running history of major project updates.
+- **[project_overview.md](project_overview.md)**: High-level purpose, domain, and stakeholders.
+- **[architecture.md](architecture.md)**: Next.js App Router and Supabase BaaS interaction patterns.
+- **[tech_stack.md](tech_stack.md)**: Frameworks, libraries, and tools in use.
+- **[data_models.md](data_models.md)**: Details on the 9 core PostgreSQL tables and relations.
+- **[api_reference.md](api_reference.md)**: Details on Next.js Route Handlers (e.g., email sending).
+- **[config_and_env.md](config_and_env.md)**: Required environment variables and configuration files.
+- **[dev_setup.md](dev_setup.md)**: Instructions for local development and Supabase instantiation.
+- **[conventions_and_patterns.md](conventions_and_patterns.md)**: Project-specific coding standards.
+- **[gotchas_and_known_issues.md](gotchas_and_known_issues.md)**: Important nuances, constraints, and historical context.
 
 ### Modules
-- [Authentication](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/modules/auth.md) — User roles and access control.
-- [Kitchen Master](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/modules/kitchen_master.md) — Master list of clusters and brands.
-- [Closure Process](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/modules/closure_process.md) — Requesting and tracking closures.
-- [Asset Management](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/modules/asset_management.md) — Fixed Asset Register, movements, and sales.
-- [Audit Log](file:///c:/CFI/Projects/Prototypes/KCM%20Dashboard/V1/Docs/modules/audit.md) — Automated database change tracking.
+- **[modules/auth.md](modules/auth.md)**: User roles and RLS integration.
+- **[modules/kitchen_master.md](modules/kitchen_master.md)**: Core kitchen directory management.
+- **[modules/kitchen_closure_status.md](modules/kitchen_closure_status.md)**: Operational and financial closure tracking.
+- **[modules/closure_requests.md](modules/closure_requests.md)**: The email notification workflow.
+- **[modules/assets.md](modules/assets.md)**: Fixed Asset Register, movements, and sales.
+- **[modules/audit_log.md](modules/audit_log.md)**: System-wide automated mutation tracking.
+- **[modules/settings.md](modules/settings.md)**: Admin configuration (e.g., email contacts).
 
 ---
 
@@ -28,22 +30,21 @@
 
 | Task Type | Read These Docs First |
 |---|---|
-| Modifying the auth flow or roles | `modules/auth.md`, `data_models.md` |
-| Adding a new API endpoint | `api_reference.md`, `architecture.md`, `conventions_and_patterns.md` |
-| Changing database schema | `data_models.md`, `architecture.md` |
-| Fixing a UI component | `architecture.md`, `conventions_and_patterns.md`, `tech_stack.md` |
-| Modifying the Kitchen list | `modules/kitchen_master.md`, `gotchas_and_known_issues.md` |
-| Updating the closure tracker | `modules/closure_process.md`, `gotchas_and_known_issues.md` |
-| Adding an asset field | `modules/asset_management.md`, `data_models.md` |
-| Setting up the project | `dev_setup.md`, `config_and_env.md` |
-| Debugging an issue | `gotchas_and_known_issues.md` |
+| Modifying the Closure Email flow | `modules/closure_requests.md`, `api_reference.md`, `config_and_env.md` |
+| Changing database schema | `data_models.md`, `gotchas_and_known_issues.md`, relevant `modules/[module].md` |
+| Fixing/Adding UI components | `conventions_and_patterns.md`, `tech_stack.md` |
+| Updating RLS or Authentication | `modules/auth.md`, `data_models.md`, `gotchas_and_known_issues.md` |
+| Adding a new Module | `architecture.md`, `conventions_and_patterns.md`, `MASTER_INDEX.md` |
+| Debugging DB mutation issues | `gotchas_and_known_issues.md`, `modules/audit_log.md` |
+| Setting up the project locally | `dev_setup.md`, `config_and_env.md` |
 
 ---
 
 ## Module Map
-
-- **Authentication**: Manages user roles and Supabase Auth. (`lib/supabase.ts`)
-- **Kitchen Master**: Master list of all kitchen combinations. (`app/(dashboard)/kitchens`)
-- **Closure Process**: Workflow for initiating emails and tracking closures. (`app/(dashboard)/closure-requests`, `app/(dashboard)/cluster`)
-- **Asset Management**: Tracking fixed assets, movements, and sales. (`app/(dashboard)/assets`)
-- **Audit Log**: Database trigger that logs operational changes. (`supabase/migrations/002_audit_trigger.sql`)
+- **Auth**: Manages roles (`finance`, `expansion`, `admin`) via Supabase. (Path: implicit via Supabase/`lib/supabase.ts`)
+- **Kitchen Master**: Directory of all kitchens. (Path: `app/(dashboard)/kitchens/`)
+- **Kitchen Closure Status**: Tracks financial/ops closure metrics. (Path: `app/(dashboard)/kitchen-closure-status/`)
+- **Closure Requests**: Automates closure notification emails. (Path: `app/(dashboard)/closure-requests/`)
+- **Assets**: Manages FAR, asset movements, and sales. (Path: `app/(dashboard)/assets/`)
+- **Audit Log**: Displays automated change logs. (Path: `app/(dashboard)/audit-log/`)
+- **Settings**: Admin config, specifically email contacts. (Path: `app/(dashboard)/settings/`)

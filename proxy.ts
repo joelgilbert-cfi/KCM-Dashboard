@@ -2,6 +2,20 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function proxy(request: NextRequest) {
+  const publicAuthPaths = [
+    '/',
+    '/login',
+    '/forgot-password',
+    '/update-password',
+    '/auth/callback',
+    '/auth/confirm',
+  ];
+  const isPublicAuthPath = publicAuthPaths.some((path) =>
+    path === '/'
+      ? request.nextUrl.pathname === '/'
+      : request.nextUrl.pathname.startsWith(path)
+  );
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -36,7 +50,7 @@ export async function proxy(request: NextRequest) {
   // If user is not authenticated and trying to access protected routes, redirect to login
   if (
     !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
+    !isPublicAuthPath &&
     !request.nextUrl.pathname.startsWith('/api/auth')
   ) {
     const url = request.nextUrl.clone();
@@ -45,7 +59,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // If user is authenticated and trying to access login, redirect to dashboard
-  if (user && request.nextUrl.pathname.startsWith('/login')) {
+  if (user && request.nextUrl.pathname === '/login') {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);

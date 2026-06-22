@@ -1,50 +1,53 @@
-# KCM Dashboard — Data Models
+# Data Models
 
-## Overview
-The application uses Supabase PostgreSQL. There are 9 core tables.
-For full TypeScript interfaces, see `lib/types.ts`.
-For the raw SQL schema, see `supabase/migrations/001_create_tables.sql`.
+The database is built on PostgreSQL, managed via Supabase. It consists of 9 core tables. All tables enforce Row Level Security (RLS) to restrict data access based on the user's role (`finance`, `expansion`, `admin`).
 
-## 1. Users (`users`)
-Stores authenticated users and their roles (`finance`, `expansion`, `admin`).
-- **Access**: Admin can edit.
+See `supabase/migrations/` for the exact SQL definitions. See `lib/types.ts` for the TypeScript interfaces mapping to these tables.
 
-## 2. Kitchen Master (`kitchen_master`)
-Master list of all kitchens. A kitchen is uniquely identified by `cluster_marker` + `brand`.
-- **Fields**: `cluster_marker`, `brand`, `kitchen_name`, `format`, `status`.
-- **Access**: Expansion (Insert/Update), Finance (Select).
-- **Note**: Soft deletion is used (`removed_at`). Changes are NOT tracked in the audit log.
+## 1. `users`
+Stores user profile information and their assigned role.
+- **Fields**: `id` (UUID), `name`, `email`, `role` (`finance`, `expansion`, `admin`), `created_at`.
 
-## 3. Closure Requests (`closure_requests`)
-Records closure initiation emails sent by BF.
-- **Fields**: `requested_by`, `status` (Draft/Sent), `to_emails`, `cc_emails`, `email_sent_at`.
-- **Access**: Finance (Insert/Update), Expansion (Select).
+## 2. `kitchen_master`
+The definitive list of kitchens.
+- **Fields**: `id` (UUID), `cluster_marker`, `brand`, `kitchen_name`, `format`, `status` (`Active`, `Under Closure`, `Closed`), `added_by`, `added_at`, `removed_at`.
+- **Relations**: `added_by` -> `users(id)`.
 
-## 4. Closure Request Clusters (`closure_request_clusters`)
-Links `closure_requests` to multiple clusters (`cluster_marker`).
+## 3. `kitchen_status`
+Tracks the complex operational and financial metrics associated with a kitchen's closure process.
+- **Fields**: `id` (UUID), `cluster_marker` (UNIQUE), `kitchen_name`, `oracle_code`, `rent`, `city`, `zone`, `format_final`, `status`, `dec_net_revenue`, `dec_ebitda`, `remarks`, etc.
+- **Relations**: `updated_by` -> `users(id)`.
 
-## 5. Closure Tracker (`closure_tracker`)
-Tracks the closure progress for each cluster. Fields map directly to the original "Kitchen Status" Excel sheet.
-- **Fields**: `cluster_marker` (Unique), `kitchen_name`, `oracle_code`, `rent`, `lock_in`, etc.
-- **Access**: Expansion (Insert/Update), Finance (Select).
-- **Rule**: Closure tracking is done per *cluster*, not per brand.
+## 4. `closure_requests`
+Represents an intention or action to send a closure notification email.
+- **Fields**: `id` (UUID), `requested_by`, `status` (`Draft`, `Sent`), `to_emails` (TEXT[]), `cc_emails` (TEXT[]), `email_sent_at`, `created_at`.
+- **Relations**: `requested_by` -> `users(id)`.
 
-## 6. Fixed Asset Register (`fixed_asset_register` / FAR)
-Master list of physical assets, owned by Finance. Linked to a specific kitchen via `kitchen_id`.
-- **Fields**: `asset_name`, `category`, `purchase_date`, `value`, `condition`, `current_status`.
-- **Access**: Finance (Insert/Update/Delete), Expansion (Select).
+## 5. `closure_request_clusters`
+A mapping table connecting `closure_requests` to specific kitchens (via `cluster_marker`).
+- **Fields**: `id` (UUID), `request_id`, `cluster_marker`.
+- **Relations**: `request_id` -> `closure_requests(id)`.
 
-## 7. Asset Movements (`asset_movements`)
-Logs when an asset is moved (e.g., to a warehouse).
-- **Fields**: `from_location`, `from_oracle_code`, `to_location`, `to_oracle_code`, `item_name`, `quantity`, `asset_id`.
-- **Access**: Expansion (Insert), Both (Select).
+## 6. `fixed_asset_register` (FAR)
+Logs physical assets belonging to kitchens.
+- **Fields**: `id` (UUID), `kitchen_id`, `asset_name`, `category`, `value`, `condition`, `current_status` (`In Kitchen`, `Moved to Warehouse`, `Sold`, `Disposed`), `created_at`.
+- **Relations**: `kitchen_id` -> `kitchen_master(id)`.
 
-## 8. Asset Sales (`asset_sales`)
-Logs when an asset is sold to the secondary market.
-- **Fields**: `asset_id`, `kitchen_id`, `item_name`, `quantity`, `sale_price`, `buyer`.
-- **Access**: Expansion (Insert), Both (Select).
+## 7. `asset_movements`
+Tracks the logistics of an asset moving from one location to another.
+- **Fields**: `id` (UUID), `from_location`, `to_location`, `item_name`, `quantity`, `asset_id`, `kitchen_id`, `logged_by`, `movement_date`.
+- **Relations**: `asset_id` -> `fixed_asset_register(id)`, `kitchen_id` -> `kitchen_master(id)`, `logged_by` -> `users(id)`.
 
-## 9. Audit Log (`audit_log`)
-Automatically records every INSERT, UPDATE, DELETE to tracked tables via a PostgreSQL trigger (`log_audit`).
-- **Fields**: `table_name`, `record_id`, `action`, `changed_by`, `old_data` (JSONB), `new_data` (JSONB).
-- **Access**: Read-only for all users. Never written to from the frontend.
+## 8. `asset_sales`
+Records the sale of an asset.
+- **Fields**: `id` (UUID), `asset_id`, `kitchen_id`, `item_name`, `sale_price`, `buyer`, `sale_date`, `logged_by`.
+- **Relations**: `asset_id` -> `fixed_asset_register(id)`, `kitchen_id` -> `kitchen_master(id)`, `logged_by` -> `users(id)`.
+
+## 9. `audit_log`
+An automatically populated log of system changes.
+- **Fields**: `id` (UUID), `table_name`, `record_id`, `action` (`INSERT`, `UPDATE`, `DELETE`), `changed_by`, `old_data` (JSONB), `new_data` (JSONB), `changed_at`.
+- **Mechanism**: Populated via PostgreSQL triggers (e.g., `audit_kitchen_status`).
+
+## 10. `email_contacts`
+Manual email contacts list for autocomplete in the Closure Requests flow.
+- **Fields**: `id` (UUID), `name`, `email` (UNIQUE), `created_by`, `created_at`, `updated_at`.
