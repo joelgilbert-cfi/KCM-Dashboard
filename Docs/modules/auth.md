@@ -5,16 +5,22 @@ Authentication is handled by Supabase Auth. Authorization is handled via a combi
 
 ## User Roles
 There are three primary roles defined in the `users` table:
-1. **Admin (`admin`)**: Full access to all tables and configurations (e.g., managing `email_contacts`).
-2. **Expansion (`expansion`)**: Can manage and update kitchen operational statuses and create closure requests.
-3. **Finance (`finance`)**: Read-only access to operational data, focused on financial metrics.
+1. **Admin (`admin`)**: Full application access, Settings access, user management, and email-contact management.
+2. **Expansion (`expansion`)**: Can manage Kitchen Master and operational closure-status data. Expansion cannot send closure emails.
+3. **Finance (`finance`)**: Can manage Kitchen Master, select kitchens, preview/send closure emails, and view closure-status data.
 
 ## RLS Policies
 RLS policies are defined in `supabase/migrations/`. 
-For example, in `kitchen_status`:
+Key examples:
+- In `kitchen_master`, Finance, Expansion, and Admin can manage rows.
 - `expansion` and `admin` can `INSERT`, `UPDATE`, `DELETE`.
-- `finance` can only `SELECT`.
+- In `kitchen_status`, Finance can `SELECT`.
+- Settings user deletion additionally verifies the requesting administrator in the server route before using the service-role client.
+
+Role identifiers are lowercase in TypeScript, API payloads, and PostgreSQL. Capitalization is presentation-only.
 
 ## Next.js Implementation
 - User session is retrieved on the server using `@supabase/ssr`.
-- Protected routes typically check for the session in their respective `page.tsx` or `layout.tsx` before rendering. If no session exists, the user is redirected to the `/login` route.
+- `proxy.ts` refreshes sessions and redirects unauthenticated users to `/login`.
+- Password recovery uses `/forgot-password`, `/auth/confirm`, `/auth/callback`, and `/update-password`.
+- Supabase Site URL and allowed Redirect URLs must contain the deployed Vercel URL and the localhost URL used for development.

@@ -53,6 +53,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -65,6 +66,7 @@ export default function SettingsPage() {
   });
   const [addError, setAddError] = useState('');
   const [contactError, setContactError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   const isAdmin = user?.role === 'admin';
 
@@ -74,6 +76,7 @@ export default function SettingsPage() {
         supabase
           .from('users')
           .select('*')
+          .is('deleted_at', null)
           .order('created_at', { ascending: false }),
         supabase
           .from('email_contacts')
@@ -119,7 +122,11 @@ export default function SettingsPage() {
         setShowAdd(false);
         setNewUser({ name: '', email: '', role: 'expansion', password: '' });
         // Refresh users list
-        const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+        const { data } = await supabase
+          .from('users')
+          .select('*')
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false });
         if (data) setUsers(data as User[]);
       }
     } catch {
@@ -136,6 +143,34 @@ export default function SettingsPage() {
 
     if (!error) {
       setUsers(users.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+
+    setSaving(true);
+    setDeleteError('');
+
+    try {
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: deleteTarget.id }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        setDeleteError(result.error || 'Failed to remove user');
+        return;
+      }
+
+      setUsers((currentUsers) => currentUsers.filter((currentUser) => currentUser.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch {
+      setDeleteError('Failed to remove user');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -249,6 +284,7 @@ export default function SettingsPage() {
                   <TableHead className="text-xs font-semibold">Email</TableHead>
                   <TableHead className="text-xs font-semibold">Role</TableHead>
                   <TableHead className="text-xs font-semibold">Change Role</TableHead>
+                  <TableHead className="w-12" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -275,6 +311,21 @@ export default function SettingsPage() {
                       ) : (
                         <span className="text-xs text-muted-foreground italic">Current user</span>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      {u.id !== user?.id ? (
+                        <button
+                          onClick={() => {
+                            setDeleteError('');
+                            setDeleteTarget(u);
+                          }}
+                          disabled={saving}
+                          className="p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
+                          aria-label={`Remove ${u.email}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -413,9 +464,9 @@ export default function SettingsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Finance">Finance</SelectItem>
-                  <SelectItem value="Expansion">Expansion</SelectItem>
-                  <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="finance">Finance</SelectItem>
+                  <SelectItem value="expansion">Expansion</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -426,6 +477,37 @@ export default function SettingsPage() {
             <Button onClick={handleAddUser} disabled={saving} className="bg-brand hover:bg-brand-dark">
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove User Confirmation Dialog */}
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open && !saving) {
+            setDeleteTarget(null);
+            setDeleteError('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove User</DialogTitle>
+            <DialogDescription>
+              Remove <strong>{deleteTarget?.name}</strong> ({deleteTarget?.email})? They will
+              immediately lose access to the application. Historical records will be retained.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={saving}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteUser} disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Remove User
             </Button>
           </DialogFooter>
         </DialogContent>

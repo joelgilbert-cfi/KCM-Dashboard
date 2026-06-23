@@ -8,7 +8,7 @@ The Audit Log provides a complete, immutable history of changes across the core 
 - SQL: `supabase/migrations/002_audit_trigger.sql`
 
 ## Tracked Tables
-- `closure_tracker`
+- `kitchen_status`
 - `fixed_asset_register`
 - `asset_movements`
 - `asset_sales`

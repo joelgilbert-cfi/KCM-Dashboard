@@ -8,7 +8,22 @@
 **Known Issue/History**: In `supabase/migrations/004_drop_closure_tracker.sql`, the legacy `closure_tracker` table was dropped in favor of a new `kitchen_status` table (`005_create_kitchen_status.sql`). Be cautious when reading older code or documentation that references `closure_tracker`.
 
 ## 3. Email Contacts Auto-Complete
-**Gotcha**: The dynamic CC list in the Closure Requests module relies on data from the `email_contacts` table. If this table is empty, the autocomplete will not suggest any names. Only Admins can currently populate this table via the Settings module.
+**Gotcha**: Recipient suggestions combine active app users and `email_contacts`. An empty manual contacts table does not prevent app users from appearing, and users can always enter a valid one-off email address.
 
 ## 4. Hardcoded User Roles
 **Gotcha**: User roles (`finance`, `expansion`, `admin`) are defined as a `CHECK` constraint in the `users` table and hardcoded in TypeScript types. Adding a new role requires a database migration to alter the check constraint and an update to `lib/types.ts`.
+
+Role values submitted to APIs and stored in PostgreSQL must remain lowercase. Capitalize only the visible label:
+```tsx
+<SelectItem value="finance">Finance</SelectItem>
+```
+
+## 5. User Removal
+**Gotcha**: `users` is referenced by historical operational records, so hard-deleting a profile can violate foreign-key constraints or destroy attribution.
+
+**Solution**: Migration `010_add_user_soft_delete.sql` adds `users.deleted_at`. The removal endpoint marks the profile removed and deletes only the Supabase Auth identity.
+
+## 6. Password Recovery Links
+**Gotcha**: Supabase recovery links are time-limited and generally single-use. Email security scanners can consume links before the recipient clicks them, producing `otp_expired`.
+
+**Solution**: Use the newest recovery email and configure both the production URL and `http://localhost:3000/**` as allowed Redirect URLs when testing both environments.

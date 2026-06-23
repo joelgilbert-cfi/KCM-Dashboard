@@ -1,12 +1,14 @@
 # Data Models
 
-The database is built on PostgreSQL, managed via Supabase. It consists of 9 core tables. All tables enforce Row Level Security (RLS) to restrict data access based on the user's role (`finance`, `expansion`, `admin`).
+The database is built on PostgreSQL, managed via Supabase. It currently has 10 application tables. All application tables enforce Row Level Security (RLS) based on the user's role (`finance`, `expansion`, `admin`).
 
 See `supabase/migrations/` for the exact SQL definitions. See `lib/types.ts` for the TypeScript interfaces mapping to these tables.
 
 ## 1. `users`
 Stores user profile information and their assigned role.
-- **Fields**: `id` (UUID), `name`, `email`, `role` (`finance`, `expansion`, `admin`), `created_at`.
+- **Fields**: `id` (UUID), `name`, `email`, `role` (`finance`, `expansion`, `admin`), `created_at`, `deleted_at`.
+- `deleted_at IS NULL` identifies active app users.
+- Removing a user deletes their Supabase Auth identity but retains this profile for historical foreign-key references.
 
 ## 2. `kitchen_master`
 The definitive list of kitchens.

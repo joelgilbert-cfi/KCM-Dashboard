@@ -8,7 +8,7 @@ The KCM (Kitchen Closure Management) Dashboard is an internal Next.js/Supabase a
 - **[project_overview.md](project_overview.md)**: High-level purpose, domain, and stakeholders.
 - **[architecture.md](architecture.md)**: Next.js App Router and Supabase BaaS interaction patterns.
 - **[tech_stack.md](tech_stack.md)**: Frameworks, libraries, and tools in use.
-- **[data_models.md](data_models.md)**: Details on the 9 core PostgreSQL tables and relations.
+- **[data_models.md](data_models.md)**: Details on the 10 application PostgreSQL tables and relations.
 - **[api_reference.md](api_reference.md)**: Details on Next.js Route Handlers (e.g., email sending).
 - **[config_and_env.md](config_and_env.md)**: Required environment variables and configuration files.
 - **[dev_setup.md](dev_setup.md)**: Instructions for local development and Supabase instantiation.
@@ -47,4 +47,4 @@ The KCM (Kitchen Closure Management) Dashboard is an internal Next.js/Supabase a
 - **Closure Requests**: Automates closure notification emails. (Path: `app/(dashboard)/closure-requests/`)
 - **Assets**: Manages FAR, asset movements, and sales. (Path: `app/(dashboard)/assets/`)
 - **Audit Log**: Displays automated change logs. (Path: `app/(dashboard)/audit-log/`)
-- **Settings**: Admin config, specifically email contacts. (Path: `app/(dashboard)/settings/`)
+- **Settings**: Admin user management, roles, removal, and email contacts. (Path: `app/(dashboard)/settings/`)

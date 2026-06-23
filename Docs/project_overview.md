@@ -11,6 +11,6 @@ The KCM (Kitchen Closure Management) Dashboard is an internal tool used to track
 
 ## Primary Stakeholders
 The application is governed by role-based access:
-- **Finance**: View-only access to kitchen status and closure records, primarily concerned with revenue impacts, rent hits, and EBITDA.
-- **Expansion**: Can manage and update kitchen statuses.
-- **Admin**: Full system access, including managing underlying reference data (e.g., email contacts for requests).
+- **Finance**: Manages Kitchen Master data, selects kitchens, sends closure request emails, and reviews financial closure-status fields.
+- **Expansion**: Manages Kitchen Master and operational closure-status data, but does not send closure request emails.
+- **Admin**: Full system access, including user accounts, roles, and email contacts.

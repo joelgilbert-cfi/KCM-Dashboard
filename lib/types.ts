@@ -9,6 +9,7 @@ export interface User {
   email: string;
   role: UserRole;
   created_at: string;
+  deleted_at?: string | null;
 }
 
 export interface EmailContact {
