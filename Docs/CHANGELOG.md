@@ -23,6 +23,7 @@
 - Light mode is the default theme.
 - Dialog widths and form-label spacing were increased for desktop usability.
 - Cluster selection uses natural ascending order.
+- Kitchen Master supports bulk soft-delete for selected rows.
 
 ## [Initial Scan] — 2026-06-18
 ### Overview

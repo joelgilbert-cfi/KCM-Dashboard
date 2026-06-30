@@ -12,7 +12,7 @@ Backed by the `kitchen_master` table.
 - **Listing**: Displays all active, under-closure, or closed kitchens.
 - **Search and Sort**: Supports filtering and natural cluster-marker sorting.
 - **Status Tracking**: The baseline `status` field (`Active`, `Under Closure`, `Closed`) dictates how the kitchen is treated in other modules (e.g., the Kitchen Closure Status module focuses on those `Under Closure`).
-- **Management**: Finance, Expansion, and Admin can add, edit, and soft-delete Kitchen Master rows.
+- **Management**: Finance, Expansion, and Admin can add, edit, single-row soft-delete, and bulk soft-delete selected Kitchen Master rows.
 - **Closure Email Selection**: Finance and Admin can select Kitchen Master rows and open the closure email workflow. Expansion can manage Kitchen Master data but cannot send closure emails.
 
 ## Dependencies

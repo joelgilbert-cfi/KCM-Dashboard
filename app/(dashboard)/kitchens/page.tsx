@@ -88,6 +88,7 @@ export default function KitchensPage() {
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<KitchenMaster | null>(null);
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
 
   // Closure email workflow
   const [selectedKitchenIds, setSelectedKitchenIds] = useState<string[]>([]);
@@ -332,6 +333,23 @@ export default function KitchensPage() {
     setSaving(false);
   };
 
+  const softDeleteSelected = async () => {
+    if (selectedKitchenIds.length === 0) return;
+    setSaving(true);
+    const idsToDelete = selectedKitchenIds;
+    const { error } = await supabase
+      .from('kitchen_master')
+      .update({ removed_at: new Date().toISOString() })
+      .in('id', idsToDelete);
+
+    if (!error) {
+      setSelectedKitchenIds((prev) => prev.filter((id) => !idsToDelete.includes(id)));
+      await fetchKitchens();
+    }
+    setShowBulkDelete(false);
+    setSaving(false);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Active':
@@ -372,6 +390,17 @@ export default function KitchensPage() {
             >
               <Mail className="mr-2 h-4 w-4" />
               Email Selected ({selectedKitchenIds.length})
+            </Button>
+          )}
+          {canManageKitchenMaster && (
+            <Button
+              onClick={() => setShowBulkDelete(true)}
+              disabled={selectedKitchenIds.length === 0}
+              variant="outline"
+              className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Selected ({selectedKitchenIds.length})
             </Button>
           )}
           {canManageKitchenMaster && (
@@ -451,7 +480,7 @@ export default function KitchensPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    {isFinance && (
+                    {canManageKitchenMaster && (
                       <TableHead className="w-10">
                         <input
                           type="checkbox"
@@ -844,6 +873,28 @@ export default function KitchensPage() {
             <Button variant="destructive" onClick={softDelete} disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={showBulkDelete} onOpenChange={setShowBulkDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Selected Kitchens</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove {selectedKitchenIds.length} selected kitchen(s)?
+              This is a soft delete and can be reversed from the database if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkDelete(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={softDeleteSelected} disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Remove Selected
             </Button>
           </DialogFooter>
         </DialogContent>
